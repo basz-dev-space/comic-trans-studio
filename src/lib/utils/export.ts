@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
-import { FabricImage, IText, StaticCanvas } from 'fabric';
+import { FabricImage, IText, StaticCanvas, Textbox } from 'fabric';
 
 const downloadBlob = (blob: Blob, filename: string) => {
   const link = document.createElement('a');
@@ -11,6 +11,27 @@ const downloadBlob = (blob: Blob, filename: string) => {
   document.body.removeChild(link);
   URL.revokeObjectURL(link.href);
 };
+
+const buildFabricOptions = (object: any) => ({
+  left: object.left ?? 0,
+  top: object.top ?? 0,
+  width: object.width,
+  height: object.height,
+  scaleX: object.scaleX ?? 1,
+  scaleY: object.scaleY ?? 1,
+  angle: object.angle ?? 0,
+  opacity: object.opacity ?? 1,
+  flipX: object.flipX ?? false,
+  flipY: object.flipY ?? false,
+  skewX: object.skewX ?? 0,
+  skewY: object.skewY ?? 0,
+  originX: object.originX,
+  originY: object.originY,
+  stroke: object.stroke,
+  strokeWidth: object.strokeWidth,
+  fill: object.fill,
+  backgroundColor: object.backgroundColor
+});
 
 const buildPageCanvasDataUrl = async (page: any): Promise<string> => {
   const el = document.createElement('canvas');
@@ -24,12 +45,7 @@ const buildPageCanvasDataUrl = async (page: any): Promise<string> => {
     if (object.type === 'image' && object.src) {
       try {
         const image = await FabricImage.fromURL(object.src);
-        image.set({
-          left: object.left ?? 0,
-          top: object.top ?? 0,
-          scaleX: object.scaleX ?? 1,
-          scaleY: object.scaleY ?? 1
-        });
+        image.set(buildFabricOptions(object));
         canvas.add(image);
       } catch {
         continue;
@@ -37,12 +53,25 @@ const buildPageCanvasDataUrl = async (page: any): Promise<string> => {
     }
 
     if (object.type === 'i-text' || object.type === 'textbox' || object.type === 'text') {
-      const text = new IText(object.text || '', {
-        left: object.left ?? 80,
-        top: object.top ?? 80,
+      const textOptions = {
+        ...buildFabricOptions(object),
         fontSize: Number(object.fontSize || 36),
-        fill: (object.fill as string) || '#111827'
-      });
+        fontFamily: object.fontFamily,
+        fontWeight: object.fontWeight,
+        fontStyle: object.fontStyle,
+        textAlign: object.textAlign,
+        lineHeight: object.lineHeight,
+        charSpacing: object.charSpacing,
+        underline: object.underline,
+        linethrough: object.linethrough,
+        overline: object.overline
+      };
+
+      const text =
+        object.type === 'textbox'
+          ? new Textbox(object.text || '', textOptions)
+          : new IText(object.text || '', textOptions);
+
       canvas.add(text);
     }
   }

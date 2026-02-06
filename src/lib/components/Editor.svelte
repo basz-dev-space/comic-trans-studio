@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { Canvas, FabricImage, IText } from 'fabric';
+  import { Canvas, FabricImage, IText, Textbox } from 'fabric';
 
   export let store: any;
   export let pageId = 0;
@@ -11,11 +11,24 @@
   let isSavingState = false;
   let stopChangeWatcher: undefined | (() => void);
 
-  const ensureObjectId = (obj: any) => {
-    if (!obj.data?.id) {
-      obj.set('data', { ...(obj.data || {}), id: `obj_${Math.random().toString(36).slice(2, 10)}` });
-    }
-  };
+  const serializeCommon = (obj: any) => ({
+    id: obj.data?.id || `obj_${Math.random().toString(36).slice(2, 10)}`,
+    type: obj.type,
+    left: obj.left,
+    top: obj.top,
+    width: obj.width,
+    height: obj.height,
+    scaleX: obj.scaleX,
+    scaleY: obj.scaleY,
+    angle: obj.angle,
+    opacity: obj.opacity,
+    flipX: obj.flipX,
+    flipY: obj.flipY,
+    skewX: obj.skewX,
+    skewY: obj.skewY,
+    originX: obj.originX,
+    originY: obj.originY
+  });
 
   const savePageState = () => {
     if (!fabricCanvas || isApplyingState || !store.pages[pageId]) return;
@@ -24,16 +37,23 @@
 
     try {
       const data = fabricCanvas.getObjects().map((obj: any) => ({
-        id: obj.data?.id || `obj_${Math.random().toString(36).slice(2, 10)}`,
-        type: obj.type,
-        text: obj.text,
-        left: obj.left,
-        top: obj.top,
-        scaleX: obj.scaleX,
-        scaleY: obj.scaleY,
+        ...serializeCommon(obj),
         src: obj.type === 'image' ? obj.getSrc?.() : undefined,
+        text: obj.text,
         fontSize: obj.fontSize,
-        fill: obj.fill
+        fontFamily: obj.fontFamily,
+        fontWeight: obj.fontWeight,
+        fontStyle: obj.fontStyle,
+        textAlign: obj.textAlign,
+        lineHeight: obj.lineHeight,
+        charSpacing: obj.charSpacing,
+        underline: obj.underline,
+        linethrough: obj.linethrough,
+        overline: obj.overline,
+        stroke: obj.stroke,
+        strokeWidth: obj.strokeWidth,
+        fill: obj.fill,
+        backgroundColor: obj.backgroundColor
       }));
 
       store.pages[pageId] = {
@@ -49,6 +69,27 @@
     }
   };
 
+  const buildFabricOptions = (object: any) => ({
+    left: object.left ?? 0,
+    top: object.top ?? 0,
+    width: object.width,
+    height: object.height,
+    scaleX: object.scaleX ?? 1,
+    scaleY: object.scaleY ?? 1,
+    angle: object.angle ?? 0,
+    opacity: object.opacity ?? 1,
+    flipX: object.flipX ?? false,
+    flipY: object.flipY ?? false,
+    skewX: object.skewX ?? 0,
+    skewY: object.skewY ?? 0,
+    originX: object.originX,
+    originY: object.originY,
+    stroke: object.stroke,
+    strokeWidth: object.strokeWidth,
+    fill: object.fill,
+    backgroundColor: object.backgroundColor
+  });
+
   const loadPageState = async () => {
     if (!fabricCanvas || !store.pages[pageId]) return;
 
@@ -60,12 +101,25 @@
 
     for (const object of page.objects || []) {
       if (object.type === 'i-text' || object.type === 'textbox' || object.type === 'text') {
-        const text = new IText(object.text || '', {
-          left: object.left ?? 80,
-          top: object.top ?? 80,
+        const textOptions = {
+          ...buildFabricOptions(object),
           fontSize: Number(object.fontSize || 36),
-          fill: (object.fill as string) || '#111827'
-        });
+          fontFamily: object.fontFamily,
+          fontWeight: object.fontWeight,
+          fontStyle: object.fontStyle,
+          textAlign: object.textAlign,
+          lineHeight: object.lineHeight,
+          charSpacing: object.charSpacing,
+          underline: object.underline,
+          linethrough: object.linethrough,
+          overline: object.overline
+        };
+
+        const text =
+          object.type === 'textbox'
+            ? new Textbox(object.text || '', textOptions)
+            : new IText(object.text || '', textOptions);
+
         text.set('data', { id: object.id });
         fabricCanvas.add(text);
       }
@@ -73,12 +127,7 @@
       if (object.type === 'image' && object.src) {
         try {
           const image = await FabricImage.fromURL(object.src as string);
-          image.set({
-            left: object.left ?? 0,
-            top: object.top ?? 0,
-            scaleX: object.scaleX ?? 1,
-            scaleY: object.scaleY ?? 1
-          });
+          image.set(buildFabricOptions(object));
           image.set('data', { id: object.id });
           fabricCanvas.add(image);
         } catch {
@@ -89,34 +138,6 @@
 
     fabricCanvas.renderAll();
     isApplyingState = false;
-  };
-
-  export const addTextObject = () => {
-    if (!fabricCanvas) return;
-
-    const text = new IText('New text', {
-      left: 80,
-      top: 80,
-      fontSize: 42,
-      fill: '#111827'
-    });
-    ensureObjectId(text);
-    fabricCanvas.add(text);
-    fabricCanvas.setActiveObject(text);
-    fabricCanvas.renderAll();
-    savePageState();
-  };
-
-  export const addImageObject = async (src: string) => {
-    if (!fabricCanvas) return;
-
-    const image = await FabricImage.fromURL(src);
-    image.set({ left: 20, top: 20, scaleX: 1, scaleY: 1 });
-    ensureObjectId(image);
-    fabricCanvas.add(image);
-    fabricCanvas.setActiveObject(image);
-    fabricCanvas.renderAll();
-    savePageState();
   };
 
   onMount(() => {

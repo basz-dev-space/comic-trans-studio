@@ -8,6 +8,7 @@
   let canvasEl: HTMLCanvasElement;
   let fabricCanvas: Canvas;
   let isApplyingState = false;
+  let isSavingState = false;
   let stopChangeWatcher: undefined | (() => void);
 
   const ensureObjectId = (obj: any) => {
@@ -19,27 +20,33 @@
   const savePageState = () => {
     if (!fabricCanvas || isApplyingState || !store.pages[pageId]) return;
 
-    const data = fabricCanvas.getObjects().map((obj: any) => ({
-      id: obj.data?.id || `obj_${Math.random().toString(36).slice(2, 10)}`,
-      type: obj.type,
-      text: obj.text,
-      left: obj.left,
-      top: obj.top,
-      scaleX: obj.scaleX,
-      scaleY: obj.scaleY,
-      src: obj.type === 'image' ? obj.getSrc?.() : undefined,
-      fontSize: obj.fontSize,
-      fill: obj.fill
-    }));
+    isSavingState = true;
 
-    store.pages[pageId] = {
-      ...store.pages[pageId],
-      width: fabricCanvas.getWidth(),
-      height: fabricCanvas.getHeight(),
-      objects: data
-    };
+    try {
+      const data = fabricCanvas.getObjects().map((obj: any) => ({
+        id: obj.data?.id || `obj_${Math.random().toString(36).slice(2, 10)}`,
+        type: obj.type,
+        text: obj.text,
+        left: obj.left,
+        top: obj.top,
+        scaleX: obj.scaleX,
+        scaleY: obj.scaleY,
+        src: obj.type === 'image' ? obj.getSrc?.() : undefined,
+        fontSize: obj.fontSize,
+        fill: obj.fill
+      }));
 
-    store.notify();
+      store.pages[pageId] = {
+        ...store.pages[pageId],
+        width: fabricCanvas.getWidth(),
+        height: fabricCanvas.getHeight(),
+        objects: data
+      };
+
+      store.notify();
+    } finally {
+      isSavingState = false;
+    }
   };
 
   const loadPageState = async () => {
@@ -128,6 +135,7 @@
     loadPageState();
 
     stopChangeWatcher = store.onChange(() => {
+      if (isSavingState) return;
       if (store.activePageId !== pageId) return;
       loadPageState();
     });

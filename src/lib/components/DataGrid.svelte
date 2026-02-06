@@ -12,78 +12,65 @@
   export let pageId = 0;
 
   let rows: TextRow[] = [];
-  let changeUnsubscribe: undefined | (() => void);
+  let unsubscribe: undefined | (() => void);
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
   let internalUpdate = false;
 
   const loadRows = () => {
-    if (!store?.pages?.[pageId]) {
+    const page = store?.pages?.[pageId];
+    if (!page) {
       rows = [];
       return;
     }
 
-    const page = store.pages[pageId];
-    rows = page.children
-      .filter((item: any) => item.type === 'text')
+    rows = (page.objects || [])
+      .filter((item: any) => item.type === 'i-text' || item.type === 'textbox' || item.type === 'text')
       .map((item: any) => ({
         id: item.id,
-        text: item.text || '',
-        x: Number(item.x || 0),
-        y: Number(item.y || 0)
+        text: String(item.text || ''),
+        x: Number(item.left || 0),
+        y: Number(item.top || 0)
       }));
   };
 
   const scheduleRowsReload = () => {
     if (internalUpdate) return;
-
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-
-    debounceTimer = setTimeout(() => {
-      loadRows();
-    }, 100);
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(loadRows, 120);
   };
 
   const updateItem = (id: string, key: 'text' | 'x' | 'y', value: string) => {
     const page = store?.pages?.[pageId];
     if (!page) return;
 
-    const item = page.children.find((child: any) => child.id === id);
+    const item = (page.objects || []).find((obj: any) => obj.id === id);
     if (!item) return;
 
     internalUpdate = true;
-    if (key === 'text') {
-      item.set({ text: value });
-    } else {
-      const parsed = Number(value);
-      if (!Number.isNaN(parsed)) {
-        item.set({ [key]: parsed });
-      }
-    }
 
+    if (key === 'text') item.text = value;
+    if (key === 'x' && !Number.isNaN(Number(value))) item.left = Number(value);
+    if (key === 'y' && !Number.isNaN(Number(value))) item.top = Number(value);
+
+    store.notify();
     loadRows();
+
     setTimeout(() => {
       internalUpdate = false;
     }, 0);
   };
 
+  onMount(() => {
+    loadRows();
+    unsubscribe = store.onChange(scheduleRowsReload);
+  });
+
   $: if (store && typeof pageId === 'number') {
     loadRows();
   }
 
-  onMount(() => {
-    if (!store) return;
-
-    changeUnsubscribe = store.onChange(() => {
-      scheduleRowsReload();
-    });
-
-    loadRows();
-  });
-
   onDestroy(() => {
-    if (changeUnsubscribe) changeUnsubscribe();
+    unsubscribe?.();
     if (debounceTimer) clearTimeout(debounceTimer);
   });
 </script>

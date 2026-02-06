@@ -1,5 +1,6 @@
-import JSZip from 'jszip';
 import { jsPDF } from 'jspdf';
+import JSZip from 'jszip';
+import { FabricImage, IText, StaticCanvas } from 'fabric';
 
 const downloadBlob = (blob: Blob, filename: string) => {
   const link = document.createElement('a');
@@ -11,9 +12,45 @@ const downloadBlob = (blob: Blob, filename: string) => {
   URL.revokeObjectURL(link.href);
 };
 
-const dataUrlToBlob = async (dataUrl: string): Promise<Blob> => {
-  const response = await fetch(dataUrl);
-  return response.blob();
+const buildPageCanvasDataUrl = async (page: any): Promise<string> => {
+  const el = document.createElement('canvas');
+  const canvas = new StaticCanvas(el, {
+    width: page.width || 900,
+    height: page.height || 1200,
+    backgroundColor: '#ffffff'
+  });
+
+  for (const object of page.objects || []) {
+    if (object.type === 'image' && object.src) {
+      try {
+        const image = await FabricImage.fromURL(object.src);
+        image.set({
+          left: object.left ?? 0,
+          top: object.top ?? 0,
+          scaleX: object.scaleX ?? 1,
+          scaleY: object.scaleY ?? 1
+        });
+        canvas.add(image);
+      } catch {
+        continue;
+      }
+    }
+
+    if (object.type === 'i-text' || object.type === 'textbox' || object.type === 'text') {
+      const text = new IText(object.text || '', {
+        left: object.left ?? 80,
+        top: object.top ?? 80,
+        fontSize: Number(object.fontSize || 36),
+        fill: (object.fill as string) || '#111827'
+      });
+      canvas.add(text);
+    }
+  }
+
+  canvas.renderAll();
+  const out = canvas.toDataURL({ format: 'png', multiplier: 2 });
+  canvas.dispose();
+  return out;
 };
 
 export const exportProjectZip = async (store: any) => {
@@ -21,8 +58,7 @@ export const exportProjectZip = async (store: any) => {
   zip.file('project.json', JSON.stringify(store.toJSON(), null, 2));
 
   for (let i = 0; i < store.pages.length; i += 1) {
-    const page = store.pages[i];
-    const dataUrl = await page.toDataURL({ pixelRatio: 2, mimeType: 'image/png' });
+    const dataUrl = await buildPageCanvasDataUrl(store.pages[i]);
     const base64Data = dataUrl.split(',')[1] || '';
     zip.file(`page-${i + 1}.png`, base64Data, { base64: true });
   }
@@ -32,40 +68,33 @@ export const exportProjectZip = async (store: any) => {
 };
 
 export const exportProjectPdf = async (store: any) => {
-  if (typeof store.toPDFDataURL === 'function') {
-    const pdfDataUrl = await store.toPDFDataURL();
-    const blob = await dataUrlToBlob(pdfDataUrl);
-    downloadBlob(blob, 'comictrans-export.pdf');
-    return;
-  }
-
   if (!store.pages.length) return;
 
-  const firstPageDataUrl = await store.pages[0].toDataURL({ pixelRatio: 2, mimeType: 'image/png' });
-  const firstImage = new Image();
+  const firstDataUrl = await buildPageCanvasDataUrl(store.pages[0]);
+  const firstImg = new Image();
   await new Promise<void>((resolve) => {
-    firstImage.onload = () => resolve();
-    firstImage.src = firstPageDataUrl;
+    firstImg.onload = () => resolve();
+    firstImg.src = firstDataUrl;
   });
 
   const pdf = new jsPDF({
-    orientation: firstImage.width >= firstImage.height ? 'landscape' : 'portrait',
+    orientation: firstImg.width >= firstImg.height ? 'landscape' : 'portrait',
     unit: 'px',
-    format: [firstImage.width, firstImage.height]
+    format: [firstImg.width, firstImg.height]
   });
 
-  pdf.addImage(firstPageDataUrl, 'PNG', 0, 0, firstImage.width, firstImage.height);
+  pdf.addImage(firstDataUrl, 'PNG', 0, 0, firstImg.width, firstImg.height);
 
   for (let i = 1; i < store.pages.length; i += 1) {
-    const pageDataUrl = await store.pages[i].toDataURL({ pixelRatio: 2, mimeType: 'image/png' });
-    const pageImage = new Image();
+    const dataUrl = await buildPageCanvasDataUrl(store.pages[i]);
+    const pageImg = new Image();
     await new Promise<void>((resolve) => {
-      pageImage.onload = () => resolve();
-      pageImage.src = pageDataUrl;
+      pageImg.onload = () => resolve();
+      pageImg.src = dataUrl;
     });
 
-    pdf.addPage([pageImage.width, pageImage.height], pageImage.width >= pageImage.height ? 'landscape' : 'portrait');
-    pdf.addImage(pageDataUrl, 'PNG', 0, 0, pageImage.width, pageImage.height);
+    pdf.addPage([pageImg.width, pageImg.height], pageImg.width >= pageImg.height ? 'landscape' : 'portrait');
+    pdf.addImage(dataUrl, 'PNG', 0, 0, pageImg.width, pageImg.height);
   }
 
   pdf.save('comictrans-export.pdf');

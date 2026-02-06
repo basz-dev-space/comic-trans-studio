@@ -3,55 +3,53 @@
   import DataGrid from '$lib/components/DataGrid.svelte';
   import Editor from '$lib/components/Editor.svelte';
   import { Button } from '$lib/components/ui/button';
-  import { activePageId, debouncedStoreChange, polotnoStore } from '$lib/services/polotno';
+  import { activePageId, debouncedStoreChange, fabricStore } from '$lib/services/fabric';
   import { exportProjectPdf, exportProjectZip } from '$lib/utils/export';
 
   type PageThumb = { id: string; index: number; name: string };
 
-  let currentPageId = polotnoStore.activePageId;
+  let currentPageId = fabricStore.activePageId;
   let pageThumbs: PageThumb[] = [];
-  let changeTick = 0;
 
   const syncPageThumbs = () => {
-    pageThumbs = polotnoStore.pages.map((page: any, index: number) => ({
+    pageThumbs = fabricStore.pages.map((page: any, index: number) => ({
       id: page.id,
       index,
       name: page.name || `Page ${index + 1}`
     }));
   };
 
-  const activePageUnsubscribe = activePageId.subscribe((value) => {
+  const pageStateUnsubscribe = activePageId.subscribe((value) => {
     currentPageId = value;
-    polotnoStore.activePageId = value;
-  });
-
-  const changeUnsubscribe = debouncedStoreChange.subscribe((value) => {
-    changeTick = value;
-  });
-
-  $: if (changeTick >= 0) {
-    currentPageId = polotnoStore.activePageId;
-    activePageId.set(currentPageId);
+    fabricStore.activePageId = value;
     syncPageThumbs();
-  }
+  });
+
+  const storeChangeUnsubscribe = debouncedStoreChange.subscribe(() => {
+    currentPageId = fabricStore.activePageId;
+    syncPageThumbs();
+  });
 
   const createPage = () => {
-    polotnoStore.addPage();
-    activePageId.set(polotnoStore.pages.length - 1);
+    fabricStore.addPage();
+    activePageId.set(fabricStore.activePageId);
   };
 
   const addText = () => {
-    const page = polotnoStore.pages[currentPageId];
+    const page = fabricStore.pages[currentPageId];
     if (!page) return;
 
-    page.addElement({
-      type: 'text',
+    page.objects.push({
+      id: `obj_${Math.random().toString(36).slice(2, 10)}`,
+      type: 'i-text',
       text: 'New text',
-      x: 80,
-      y: 80,
+      left: 80,
+      top: 80,
       fontSize: 42,
-      fill: 'black'
+      fill: '#111827'
     });
+
+    fabricStore.notify();
   };
 
   const handleImageUpload = async (event: Event) => {
@@ -66,18 +64,20 @@
       reader.readAsDataURL(file);
     });
 
-    const page = polotnoStore.pages[currentPageId];
+    const page = fabricStore.pages[currentPageId];
     if (!page) return;
 
-    page.addElement({
+    page.objects.push({
+      id: `obj_${Math.random().toString(36).slice(2, 10)}`,
       type: 'image',
       src: dataUrl,
-      x: 0,
-      y: 0,
-      width: 800,
-      height: 1200
+      left: 0,
+      top: 0,
+      scaleX: 1,
+      scaleY: 1
     });
 
+    fabricStore.notify();
     input.value = '';
   };
 
@@ -87,16 +87,14 @@
     if (!file) return;
 
     const text = await file.text();
-    polotnoStore.loadJSON(JSON.parse(text));
-
-    const nextPageId = Math.min(currentPageId, Math.max(polotnoStore.pages.length - 1, 0));
-    activePageId.set(nextPageId);
+    fabricStore.loadJSON(JSON.parse(text));
+    activePageId.set(fabricStore.activePageId);
     input.value = '';
   };
 
   onDestroy(() => {
-    activePageUnsubscribe();
-    changeUnsubscribe();
+    pageStateUnsubscribe();
+    storeChangeUnsubscribe();
   });
 </script>
 
@@ -118,8 +116,8 @@
         Open JSON
         <input type="file" accept="application/json" class="hidden" on:change={openProjectJson} />
       </label>
-      <Button variant="outline" on:click={() => exportProjectZip(polotnoStore)}>Export ZIP</Button>
-      <Button variant="outline" on:click={() => exportProjectPdf(polotnoStore)}>Export PDF</Button>
+      <Button variant="outline" on:click={() => exportProjectZip(fabricStore)}>Export ZIP</Button>
+      <Button variant="outline" on:click={() => exportProjectPdf(fabricStore)}>Export PDF</Button>
     </div>
   </header>
 
@@ -142,11 +140,11 @@
     </aside>
 
     <section class="h-full min-w-0 overflow-hidden">
-      <Editor store={polotnoStore} pageId={currentPageId} />
+      <Editor store={fabricStore} pageId={currentPageId} />
     </section>
 
     <section class="h-full overflow-hidden">
-      <DataGrid store={polotnoStore} pageId={currentPageId} />
+      <DataGrid store={fabricStore} pageId={currentPageId} />
     </section>
   </main>
 </div>

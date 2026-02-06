@@ -1,0 +1,15 @@
+{
+  "installedWith": "npx skills add -y -g",
+  "skills": [
+    "svelte-code-writer",
+    "web-design-guidelines",
+    "ui-ux-pro-max",
+    "svelte5-best-practices",
+    "svelte-runes",
+    "sveltekit-structure",
+    "audit-website",
+    "frontend-design",
+    "canvas-design",
+    "database-schema-designer"
+  ]
+}

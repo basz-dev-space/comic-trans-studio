@@ -99,7 +99,7 @@
       <div class="text-sm font-semibold text-[#160204]">{data.chapterName}</div>
     </div>
     <div class="flex flex-wrap items-center gap-2">
-      <a href={`/project/${data.projectId}`}><Button variant="outline" className="rounded-3xl">{t($locale, 'chapter.back')}</Button></a>
+      <a class="inline-flex h-10 items-center justify-center rounded-3xl border border-[#f0d2b8] bg-white px-4 text-sm font-medium text-[#160204] hover:bg-[#fff2e3]" href={`/project/${data.projectId}`}>{t($locale, 'chapter.back')}</a>
       <Button on:click={createPage} className="rounded-3xl">{t($locale, 'chapter.newPage')}</Button>
       <Button variant="outline" on:click={addText} className="rounded-3xl">{t($locale, 'chapter.addText')}</Button>
       <Button variant="outline" on:click={quickAdd} className="rounded-3xl bg-[#f5c088]">{t($locale, 'chapter.quick')}</Button>

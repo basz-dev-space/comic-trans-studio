@@ -14,7 +14,7 @@
       <h1 class="text-2xl font-semibold text-[#160204]">{t($locale, 'projects.title')}</h1>
       <p class="text-sm text-[#5d3438]">{t($locale, 'projects.welcome')}, {data.user.name}</p>
     </div>
-    <a href="/"><Button variant="outline" className="rounded-3xl">{t($locale, 'nav.home')}</Button></a>
+    <a class="inline-flex h-10 items-center justify-center rounded-3xl border border-[#f0d2b8] bg-white px-4 text-sm font-medium text-[#160204] hover:bg-[#fff2e3]" href="/">{t($locale, 'nav.home')}</a>
   </Card>
 
   <form method="POST" action="?/createProject">
@@ -32,7 +32,7 @@
             <h2 class="font-semibold text-[#160204]">{project.name}</h2>
             <p class="mt-2 text-sm text-[#5d3438]">{t($locale, 'landing.kpi.projectsDesc')}</p>
           </div>
-          <a href={`/project/${project.id}`}><Button className="rounded-3xl">{t($locale, 'projects.open')}</Button></a>
+          <a class="inline-flex h-10 items-center justify-center rounded-3xl bg-[#e18e90] px-4 text-sm font-medium text-[#160204] hover:bg-[#d97b7d]" href={`/project/${project.id}`}>{t($locale, 'projects.open')}</a>
         </div>
       </Card>
     {/each}

@@ -16,7 +16,7 @@
       <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[#5d3438]">{t($locale, 'project.badge')}</p>
       <h1 class="text-2xl font-semibold text-[#160204]">{data.project.name}</h1>
     </div>
-    <a href="/projects"><Button variant="outline" className="rounded-3xl">{t($locale, 'project.back')}</Button></a>
+    <a class="inline-flex h-10 items-center justify-center rounded-3xl border border-[#f0d2b8] bg-white px-4 text-sm font-medium text-[#160204] hover:bg-[#fff2e3]" href="/projects">{t($locale, 'project.back')}</a>
   </Card>
 
   <form method="POST" action="?/createChapter">
@@ -33,7 +33,7 @@
           <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <a class="font-medium text-[#160204] hover:underline" href={`/project/chapter/${chapter.id}`}>{chapter.name}</a>
             <div class="flex flex-wrap items-center gap-2">
-              <a href={`/project/chapter/${chapter.id}`}><Button className="h-9 rounded-3xl">{t($locale, 'project.open')}</Button></a>
+              <a class="inline-flex h-9 items-center justify-center rounded-3xl bg-[#e18e90] px-4 text-sm font-medium text-[#160204] hover:bg-[#d97b7d]" href={`/project/chapter/${chapter.id}`}>{t($locale, 'project.open')}</a>
               <form method="POST" action="?/renameChapter" class="flex items-center gap-2">
                 <input type="hidden" name="chapterId" value={chapter.id} />
                 <Input name="name" placeholder={t($locale, 'project.rename')} className="h-9 w-36" />

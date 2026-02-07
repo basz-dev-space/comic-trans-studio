@@ -5,6 +5,7 @@ export type ChapterPage = {
   name: string;
   width: number;
   height: number;
+  backgroundSrc?: string;
   objects: Record<string, unknown>[];
 };
 

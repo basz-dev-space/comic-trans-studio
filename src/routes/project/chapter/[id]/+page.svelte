@@ -5,6 +5,7 @@
   import { Button } from '$lib/components/ui/button';
   import { activePageId, debouncedStoreChange, fabricStore } from '$lib/services/fabric';
   import { exportProjectPdf, exportProjectZip } from '$lib/utils/export';
+  import JSZip from 'jszip';
   import { locale, t } from '$lib/i18n';
 
   export let data: {
@@ -30,6 +31,110 @@
   let activeRightTab: 'properties' | 'datagrid' = 'datagrid';
 
   let detachResizeListeners: undefined | (() => void);
+  let importInputEl: HTMLInputElement;
+
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('Unable to read file'));
+      reader.readAsDataURL(file);
+    });
+
+  const loadImageSize = (src: string) =>
+    new Promise<{ width: number; height: number }>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve({ width: image.naturalWidth || 900, height: image.naturalHeight || 1200 });
+      image.onerror = () => reject(new Error('Unable to load image'));
+      image.src = src;
+    });
+
+  const appendImagePage = async (src: string, name: string) => {
+    const { width, height } = await loadImageSize(src);
+    const nextPage = {
+      id: `page_${Math.random().toString(36).slice(2, 10)}`,
+      name,
+      width,
+      height,
+      backgroundSrc: src,
+      objects: []
+    };
+
+    const firstPage = fabricStore.pages[0];
+    const canReplaceFirst =
+      fabricStore.pages.length === 1 &&
+      !firstPage?.backgroundSrc &&
+      (!Array.isArray(firstPage?.objects) || firstPage.objects.length === 0);
+
+    if (canReplaceFirst) {
+      fabricStore.pages[0] = { ...nextPage, name: firstPage?.name || name };
+      return;
+    }
+
+    fabricStore.pages.push(nextPage);
+  };
+
+  const importImageFiles = async (files: File[]) => {
+    for (const file of files) {
+      const src = await readFileAsDataUrl(file);
+      await appendImagePage(src, file.name || `Page ${fabricStore.pages.length + 1}`);
+    }
+  };
+
+  const importZipAsPages = async (file: File) => {
+    const zip = await JSZip.loadAsync(await file.arrayBuffer());
+    const imageEntries = Object.values(zip.files).filter((entry) => !entry.dir && /\.(png|jpe?g|webp)$/i.test(entry.name));
+
+    for (const entry of imageEntries) {
+      const blob = await entry.async('blob');
+      const src = await readFileAsDataUrl(new File([blob], entry.name, { type: blob.type || 'image/png' }));
+      await appendImagePage(src, entry.name.split('/').pop() || `Page ${fabricStore.pages.length + 1}`);
+    }
+  };
+
+  const renderPdfPage = async (pdfPage: any) => {
+    const viewport = pdfPage.getViewport({ scale: 1.5 });
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) return '';
+
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    await pdfPage.render({ canvasContext: context, viewport }).promise;
+    return canvas.toDataURL('image/png');
+  };
+
+  const importPdfAsPages = async (file: File) => {
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const loadingTask = pdfjs.getDocument({ data: await file.arrayBuffer(), disableWorker: true } as any);
+    const pdf = await loadingTask.promise;
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum += 1) {
+      const pdfPage = await pdf.getPage(pageNum);
+      const src = await renderPdfPage(pdfPage);
+      if (!src) continue;
+      await appendImagePage(src, `${file.name}-p${pageNum}`);
+    }
+  };
+
+  const handleImportFiles = async (event: Event) => {
+    const files = Array.from((event.target as HTMLInputElement).files || []);
+    if (!files.length) return;
+
+    for (const file of files) {
+      if (file.type.startsWith('image/')) {
+        await importImageFiles([file]);
+      } else if (/\.zip$/i.test(file.name)) {
+        await importZipAsPages(file);
+      } else if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+        await importPdfAsPages(file);
+      }
+    }
+
+    activePageId.set(Math.max(0, fabricStore.pages.length - 1));
+    fabricStore.notify();
+    (event.target as HTMLInputElement).value = '';
+  };
 
   onMount(() => {
     fabricStore.loadJSON({ pages: data.pages, activePageId: 0 });
@@ -76,6 +181,7 @@
   const addText = () => {
     const page = fabricStore.pages[currentPageId];
     if (!page) return;
+    if (!Array.isArray(page.objects)) page.objects = [];
 
     page.objects.push({
       id: `obj_${Math.random().toString(36).slice(2, 10)}`,
@@ -150,6 +256,8 @@
       <Button on:click={createPage} className="h-10 rounded-lg bg-[#e18e90] px-4 text-sm font-semibold text-white hover:bg-[#d97b7d]">{t($locale, 'chapter.newPage')}</Button>
       <Button variant="outline" on:click={addText} className="h-10 rounded-lg px-4 text-sm font-semibold">{t($locale, 'chapter.addText')}</Button>
       <Button variant="outline" on:click={quickAdd} className="h-10 rounded-lg bg-[#f5c088] px-4 text-sm font-semibold text-[#160204] hover:bg-[#e6a844]">{t($locale, 'chapter.quick')}</Button>
+      <Button variant="outline" on:click={() => importInputEl?.click()} className="h-10 rounded-lg px-4 text-sm font-semibold">🖼️ {t($locale, 'chapter.importPages')}</Button>
+      <input bind:this={importInputEl} type="file" class="hidden" accept="image/*,.zip,.pdf,application/pdf" multiple on:change={handleImportFiles} />
       <div class="ml-auto flex gap-2">
         <Button variant="outline" on:click={() => exportProjectZip(fabricStore)} className="h-10 rounded-lg px-4 text-sm font-semibold">📦 {t($locale, 'chapter.exportZip')}</Button>
         <Button variant="outline" on:click={() => exportProjectPdf(fabricStore)} className="h-10 rounded-lg px-4 text-sm font-semibold">📄 {t($locale, 'chapter.exportPdf')}</Button>
@@ -157,8 +265,8 @@
     </div>
   </div>
 
-  <main class="flex min-h-0 gap-2 overflow-hidden">
-    <section class="min-h-0 overflow-hidden rounded-2xl border border-[#f1d2b8] bg-white shadow-elevation-1" style={`width:${leftPanelWidth}px`}>
+  <main class="flex min-h-0 min-w-0 gap-2 overflow-hidden">
+    <section class="min-h-0 min-w-0 overflow-hidden rounded-2xl border border-[#f1d2b8] bg-white shadow-elevation-1" style={`width:${leftPanelWidth}px`}>
       <div class="sticky top-0 border-b border-[#f0d2b8] bg-white px-4 py-3">
         <h2 class="text-sm font-semibold text-[#160204]">{t($locale, 'chapter.pages')}</h2>
         <p class="mt-1 text-xs text-[#5d3438]">{pageThumbs.length} {t($locale, 'chapter.pageCount')}</p>
@@ -194,7 +302,7 @@
       <div class="h-16 w-1 rounded-full bg-[#e9d4b8]"></div>
     </button>
 
-    <aside class="min-h-0 overflow-hidden rounded-2xl border border-[#f1d2b8] bg-white shadow-elevation-1" style={`width:${rightPanelWidth}px`}>
+    <aside class="min-h-0 min-w-0 overflow-hidden rounded-2xl border border-[#f1d2b8] bg-white shadow-elevation-1" style={`width:${rightPanelWidth}px`}>
       <div class="flex border-b border-[#f0d2b8] p-2">
         <button class={`flex-1 rounded-md px-3 py-2 text-sm font-semibold ${activeRightTab === 'properties' ? 'bg-[#f5e8dd] text-[#160204]' : 'text-[#5d3438]'}`} on:click={() => (activeRightTab = 'properties')}>{t($locale, 'chapter.properties')}</button>
         <button class={`flex-1 rounded-md px-3 py-2 text-sm font-semibold ${activeRightTab === 'datagrid' ? 'bg-[#f5e8dd] text-[#160204]' : 'text-[#5d3438]'}`} on:click={() => (activeRightTab = 'datagrid')}>{t($locale, 'chapter.datagrid')}</button>

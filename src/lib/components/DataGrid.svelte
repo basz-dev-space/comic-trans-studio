@@ -39,7 +39,7 @@
   const scheduleRowsReload = () => {
     if (internalUpdate) return;
     if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(loadRows, 120);
+    debounceTimer = setTimeout(loadRows, 30);
   };
 
   const updateItem = (id: string, key: 'text' | 'x' | 'y', value: string) => {

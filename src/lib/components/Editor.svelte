@@ -257,6 +257,7 @@
     fabricCanvas.on('object:moving', onChanged);
     fabricCanvas.on('object:scaling', onChanged);
     fabricCanvas.on('object:removed', onChanged);
+    fabricCanvas.on('object:added', onChanged);
     fabricCanvas.on('text:changed', onChanged);
 
     loadPageState();

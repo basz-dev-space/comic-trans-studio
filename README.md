@@ -42,6 +42,9 @@ ComicTrans Studio is a SvelteKit application for comic translation workflows. It
   - Auto-save is debounced before API persistence.
   - Panel resize is constrained with min/max widths for layout stability.
   - Empty datagrid states are explicit to avoid ambiguous blank views.
+- Page import workflow:
+  - Chapter toolbar supports importing `image/*`, `.zip` (image bundles), and `.pdf` (each PDF page rasterized to an editor page).
+  - Imported pages set `backgroundSrc` so comic page art is fixed as canvas background while overlays stay editable.
 
 ## Tech stack
 - **Frontend:** SvelteKit + Svelte 5 + TypeScript

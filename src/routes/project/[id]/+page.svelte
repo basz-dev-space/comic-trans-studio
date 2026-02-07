@@ -20,7 +20,10 @@
     <div>
       <p class="badge-label">{t($locale, 'project.badge')}</p>
       <h1 class="text-display-md mt-3 text-[#160204]">{data.project.name}</h1>
-      <p class="text-body-md mt-2 text-[#5d3438]">{data.chapters.length} {t($locale, 'project.chapterCount')}</p>
+      <p class="text-body-md mt-2 text-[#5d3438]">
+        {data.chapters.length}
+        {t($locale, data.chapters.length === 1 ? 'project.chapterCountOne' : 'project.chapterCount')}
+      </p>
     </div>
     <a class="inline-flex h-11 items-center justify-center gap-2 rounded-full border-2 border-[#e18e90] bg-white px-6 text-sm font-semibold text-[#e18e90] transition-all hover:bg-[#f5e8dd]" href="/projects">← {t($locale, 'project.back')}</a>
   </div>

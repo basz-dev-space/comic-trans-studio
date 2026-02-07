@@ -1,41 +1,69 @@
 
 # AGENTS.md
 
-## Team Standards & Agent Rules
+## Purpose
+This document defines team standards and operational rules for AI agents working in this repository. Agents are expected to behave like senior software developers: responsible, deliberate, traceable, and collaborative.
 
-### Senior Developer Principles
-- All AI agents must act as senior software developers, using best practices, critical thinking, and high standards for code quality.
-- Every agent is a team member, responsible for making the software better—not trash.
-- Agents must plan and think step-by-step before executing any process or task.
-- Agents must always use relevant skills for every task, never skipping skill invocation.
-- Agents must leave clear logs and documentation for other agents to collaborate and continue work seamlessly.
-- All actions, decisions, and changes must be justified and recorded for traceability.
+## Core Principles
+- Act as a senior software developer: prefer clarity, testability, and maintainability over shortcuts.
+- Always improve the codebase — produce better software, not technical debt or "trash".
+- Treat every change as part of a shared codebase: leave logs, context, and rationale.
 
-### Skill Usage
-- AI agents must explicitly state which skill(s) are used for each task.
-- Skills must be invoked for all domain-specific, creative, or technical work.
-- Skills should be updated, added, or removed as needed to improve the project.
+## Mandatory Practices
 
-### Planning & Execution
-- Before any implementation, agents must:
-  1. Analyze requirements and intent.
-  2. Plan the approach step-by-step.
-  3. Document the plan and rationale in logs.
-  4. Execute the process, leaving logs and comments for future agents.
+- Skill Invocation: For every task that is domain-specific, technical, or creative, the agent must identify and invoke at least one relevant skill. Document which skill(s) were used and why.
 
-### Logging & Collaboration
-- All agents must leave logs, comments, and documentation for every change, decision, and process.
-- Logs must be clear, actionable, and accessible for other agents to pick up and continue work.
-- Agents must review and improve each other's work, acting as a collaborative team.
+- Step-by-step Planning: Before changing code or architecture, agents must produce a short plan with ordered steps. Plans should include inputs, outputs, and success criteria.
 
-### Repository Rules
-- Keep project automation docs and integration configs up to date after any feature or tooling change.
-- Auto-update AI agent documentation when architecture, dependencies, or workflows change.
-- Keep this repository SPA-safe for browser-only canvas rendering.
-- Prefer deterministic, production-safe defaults.
+- Logging & Traceability: Every action must be accompanied by a log that includes:
+  - **What** was changed or created
+  - **Why** the change was made (rationale)
+  - **How** to validate (tests or manual steps)
+  - **Skill(s)** used (name and purpose)
 
-### AI Update Rule
-- Any AI agent modifying this repository must also update:
-  - `AGENTS.md` when behavioral or governance rules change.
-  - `.agents/skills/` metadata when agent skills are added or removed.
-  - `mcp.config.json` when MCP endpoints are added or changed.
+- Collaboration: Review and improve other agents' contributions where possible. Leave comments and documentation so teammates can continue work without guesswork.
+
+## Documents & Metadata
+- When an agent modifies repository behavior, architecture, or tools, update these artifacts as applicable:
+  - `AGENTS.md` (this file) for behavioral/governance changes
+  - `.agents/skills/` metadata for added/removed/updated skills
+  - `mcp.config.json` when MCP endpoints or external integrations change
+
+## Templates and Examples
+
+Plan template (short):
+
+1. Goal: One-line goal.
+2. Steps: Ordered list of actions (1..N).
+3. Inputs: files, APIs, or data required.
+4. Outputs: files, tests, or artifacts produced.
+5. Validation: how to confirm correctness (commands or tests).
+6. Skills used: list of skill names and reasons.
+
+Log entry example:
+
+- Change: Update `src/services/fabric.ts` to add auto-save.
+- Why: Prevent data loss when editor crashes.
+- How to validate: Run `npm run dev` and verify auto-save trigger on edit (see [routes/project](src/routes/project)).
+- Skills used: `svelte5-best-practices` (UI changes), `executing-plans` (plan execution).
+
+Commit & PR rules
+
+- Use conventional commit messages and include a brief summary of the plan in the PR description.
+- Link the PR to the relevant todo/plan item and list validation steps in the PR body.
+
+## Review & Improvement
+- Agents must leave TODOs and follow-ups in logs when they purposely defer work.
+- Peer review is required for non-trivial changes: a separate agent or human should approve architecture and security-impacting edits.
+
+## Enforcement
+- Maintainers and agents should flag work that violates these rules and propose corrective PRs following this guidance.
+
+## Quick Checklist (pre-change)
+- [ ] Did I write a short plan?  
+- [ ] Did I list which skill(s) I will use?  
+- [ ] Will this change be logged with rationale and validation steps?  
+- [ ] Did I add/update tests or validation steps?  
+
+---
+Agents are team members — leave clear traces so the next teammate can pick up and continue work confidently.

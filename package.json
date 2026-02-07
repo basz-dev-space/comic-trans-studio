@@ -40,6 +40,7 @@
     "fabric": "^6.4.3",
     "jspdf": "^2.5.1",
     "jszip": "^3.10.1",
+    "pdfjs-dist": "^4.10.38",
     "tailwind-merge": "^2.2.2"
   }
 }

@@ -29,6 +29,23 @@ ComicTrans Studio is a SvelteKit application for comic translation workflows. It
 - i18n messages and locale store are in `src/lib/i18n.ts`.
 - Chapter Studio keeps its three-panel workflow (pages, canvas, data grid) with quicker action access.
 
+### Editor Zone conventions (LIG-10)
+- The chapter editor is split into three resizable panels: page list, canvas, and right-side inspector/datagrid.
+- Right panel supports `Properties` and `Datagrid` tabs; DataGrid edits update Fabric text object state (`text`, `left`, `top`) through shared store notifications.
+- Fabric event → state mapping:
+  - `object:moving`, `object:scaling`, `object:modified`, `object:removed`, `text:changed` all serialize canvas objects back into `fabricStore.pages[activePage].objects`.
+  - Save payload excludes locked background objects (`data.isBackground = true`) to keep persisted overlays clean.
+- Background image behavior:
+  - Each page can define `backgroundSrc`; background is rendered as a non-selectable Fabric image pinned to page bounds.
+  - Background is always sent behind overlays and cannot be transformed by editor actions.
+- Production-safe defaults:
+  - Auto-save is debounced before API persistence.
+  - Panel resize is constrained with min/max widths for layout stability.
+  - Empty datagrid states are explicit to avoid ambiguous blank views.
+- Page import workflow:
+  - Chapter toolbar supports importing `image/*`, `.zip` (image bundles), and `.pdf` (each PDF page rasterized to an editor page).
+  - Imported pages set `backgroundSrc` so comic page art is fixed as canvas background while overlays stay editable.
+
 ## Tech stack
 - **Frontend:** SvelteKit + Svelte 5 + TypeScript
 - **Styling:** Tailwind CSS + shadcn-style UI primitives

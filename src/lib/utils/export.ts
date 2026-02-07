@@ -41,6 +41,18 @@ const buildPageCanvasDataUrl = async (page: any): Promise<string> => {
     backgroundColor: '#ffffff'
   });
 
+  if (page.backgroundSrc) {
+    try {
+      const background = await FabricImage.fromURL(page.backgroundSrc);
+      const scale = Math.min((page.width || 900) / background.width!, (page.height || 1200) / background.height!);
+      background.set({ left: 0, top: 0, selectable: false, evented: false, scaleX: scale, scaleY: scale });
+      canvas.add(background);
+      canvas.sendObjectToBack(background);
+    } catch {
+      // ignore background rendering errors
+    }
+  }
+
   for (const object of page.objects || []) {
     if (object.type === 'image' && object.src) {
       try {

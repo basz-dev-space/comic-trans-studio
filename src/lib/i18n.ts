@@ -63,15 +63,29 @@ const messages: Record<Locale, Record<string, string>> = {
     'chapter.newPage': 'New page',
     'chapter.addText': 'Add text',
     'chapter.quick': 'Quick add page + text',
+    'chapter.importPages': 'Import images/zip/pdf',
     'chapter.exportZip': 'Export ZIP',
     'chapter.exportPdf': 'Export PDF',
     'chapter.pages': 'Pages',
     'chapter.pageCount': 'pages',
+    'chapter.properties': 'Properties',
+    'chapter.datagrid': 'Datagrid',
+    'chapter.propertiesHintTitle': 'Editor notes',
+    'chapter.propertiesHint': 'Use the canvas toolbar to add and style overlays while the DataGrid keeps text coordinates in sync.',
+    'chapter.propertiesHintA': 'Background image is fixed to page bounds for stable comic-page editing.',
+    'chapter.propertiesHintB': 'Drag panel dividers to resize pages list and inspector/data area.',
+    'chapter.propertiesHintC': 'All edits are auto-saved and persisted to chapter state.',
 
     'grid.title': 'Text Data Grid',
     'grid.items': 'items',
+    'grid.addRow': 'Add row',
+    'grid.empty': 'No text overlays yet. Add one from the editor or grid.',
     'editor.title': 'Canvas editor',
-    'editor.help': 'Drag, resize, and edit text objects'
+    'editor.help': 'Drag, resize, and edit text objects',
+    'editor.addText': 'Text',
+    'editor.addShape': 'Shape',
+    'editor.addImage': 'Image',
+    'editor.remove': 'Delete'
   },
   th: {
     'app.name': 'ComicTrans Studio',
@@ -131,15 +145,29 @@ const messages: Record<Locale, Record<string, string>> = {
     'chapter.newPage': 'หน้าใหม่',
     'chapter.addText': 'เพิ่มข้อความ',
     'chapter.quick': 'เพิ่มหน้า + ข้อความ',
+    'chapter.importPages': 'นำเข้า รูป/zip/pdf',
     'chapter.exportZip': 'ส่งออก ZIP',
     'chapter.exportPdf': 'ส่งออก PDF',
     'chapter.pages': 'หน้า',
     'chapter.pageCount': 'หน้า',
+    'chapter.properties': 'คุณสมบัติ',
+    'chapter.datagrid': 'ดาต้ากริด',
+    'chapter.propertiesHintTitle': 'คำแนะนำการแก้ไข',
+    'chapter.propertiesHint': 'ใช้แถบเครื่องมือบนแคนวาสเพื่อเพิ่มองค์ประกอบ และใช้ DataGrid เพื่อซิงก์พิกัดข้อความแบบเรียลไทม์',
+    'chapter.propertiesHintA': 'รูปพื้นหลังจะถูกล็อกให้พอดีกับขนาดหน้าคอมิกเสมอ',
+    'chapter.propertiesHintB': 'ลากตัวแบ่งเพื่อปรับขนาดแผงหน้ารายการและแผงด้านขวาได้',
+    'chapter.propertiesHintC': 'ทุกการแก้ไขจะบันทึกอัตโนมัติลงสถานะของบท',
 
     'grid.title': 'ตารางข้อความ',
     'grid.items': 'รายการ',
+    'grid.addRow': 'เพิ่มแถว',
+    'grid.empty': 'ยังไม่มีข้อความบนหน้านี้ เพิ่มได้จากตัวแก้ไขหรือตาราง',
     'editor.title': 'ตัวแก้ไขแคนวาส',
-    'editor.help': 'ลาก ปรับขนาด และแก้ข้อความได้ทันที'
+    'editor.help': 'ลาก ปรับขนาด และแก้ข้อความได้ทันที',
+    'editor.addText': 'ข้อความ',
+    'editor.addShape': 'รูปทรง',
+    'editor.addImage': 'รูปภาพ',
+    'editor.remove': 'ลบ'
   }
 };
 

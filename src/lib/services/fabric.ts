@@ -19,6 +19,7 @@ export type PageSnapshot = {
   name: string;
   width: number;
   height: number;
+  backgroundSrc?: string;
   objects: CanvasObject[];
 };
 

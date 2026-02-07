@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import { Canvas, FabricImage, IText, Textbox } from 'fabric';
+  import { Card } from '$lib/components/ui/card';
+  import { locale, t } from '$lib/i18n';
 
   export let store: any;
   export let pageId = 0;
@@ -142,7 +144,7 @@
 
   onMount(() => {
     fabricCanvas = new Canvas(canvasEl, {
-      backgroundColor: '#f8fafc',
+      backgroundColor: '#ffffff',
       preserveObjectStacking: true
     });
 
@@ -175,8 +177,12 @@
   });
 </script>
 
-<div class="h-full w-full overflow-auto bg-slate-200 p-4">
-  <div class="mx-auto w-fit rounded bg-white p-2 shadow">
+<Card className="flex h-full w-full min-h-0 flex-col overflow-auto p-4">
+  <div class="mb-3 flex items-center justify-between text-xs text-[#7A603A]">
+    <span>{t($locale, 'editor.title')}</span>
+    <span>{t($locale, 'editor.help')}</span>
+  </div>
+  <div class="mx-auto w-fit rounded-2xl border border-[#E3D5AB] bg-white p-2 ">
     <canvas bind:this={canvasEl}></canvas>
   </div>
-</div>
+</Card>

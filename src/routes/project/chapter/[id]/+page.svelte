@@ -3,8 +3,10 @@
   import DataGrid from '$lib/components/DataGrid.svelte';
   import Editor from '$lib/components/Editor.svelte';
   import { Button } from '$lib/components/ui/button';
+  import { Card } from '$lib/components/ui/card';
   import { activePageId, debouncedStoreChange, fabricStore } from '$lib/services/fabric';
   import { exportProjectPdf, exportProjectZip } from '$lib/utils/export';
+  import { locale, t } from '$lib/i18n';
 
   export let data: {
     chapterId: string;
@@ -78,6 +80,11 @@
     fabricStore.notify();
   };
 
+  const quickAdd = () => {
+    createPage();
+    addText();
+  };
+
   onDestroy(() => {
     pageStateUnsubscribe();
     storeChangeUnsubscribe();
@@ -85,38 +92,46 @@
   });
 </script>
 
-<div class="h-full w-full overflow-hidden bg-slate-50">
-  <header class="fixed left-0 top-0 z-20 flex h-14 w-full items-center justify-between border-b bg-white px-4">
-    <div class="text-sm font-semibold">{data.chapterName}</div>
-    <div class="flex items-center gap-2">
-      <a class="rounded-md border px-3 py-2 text-sm" href={`/project/${data.projectId}`}>Back</a>
-      <Button on:click={createPage}>New Page</Button>
-      <Button variant="outline" on:click={addText}>Add Text</Button>
-      <Button variant="outline" on:click={() => exportProjectZip(fabricStore)}>Export ZIP</Button>
-      <Button variant="outline" on:click={() => exportProjectPdf(fabricStore)}>Export PDF</Button>
+<div class="grid h-full min-h-[72vh] grid-rows-[auto_1fr] gap-4 pb-2">
+  <Card className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#5d3438]">{t($locale, 'chapter.badge')}</p>
+      <div class="text-sm font-semibold text-[#160204]">{data.chapterName}</div>
     </div>
-  </header>
+    <div class="flex flex-wrap items-center gap-2">
+      <a href={`/project/${data.projectId}`}><Button variant="outline" className="rounded-3xl">{t($locale, 'chapter.back')}</Button></a>
+      <Button on:click={createPage} className="rounded-3xl">{t($locale, 'chapter.newPage')}</Button>
+      <Button variant="outline" on:click={addText} className="rounded-3xl">{t($locale, 'chapter.addText')}</Button>
+      <Button variant="outline" on:click={quickAdd} className="rounded-3xl bg-[#f5c088]">{t($locale, 'chapter.quick')}</Button>
+      <Button variant="outline" on:click={() => exportProjectZip(fabricStore)} className="rounded-3xl">{t($locale, 'chapter.exportZip')}</Button>
+      <Button variant="outline" on:click={() => exportProjectPdf(fabricStore)} className="rounded-3xl">{t($locale, 'chapter.exportPdf')}</Button>
+    </div>
+  </Card>
 
-  <main class="grid h-full w-full overflow-hidden pt-14" style="grid-template-columns: 260px minmax(0, 1fr) 400px;">
-    <aside class="h-full overflow-auto border-r bg-white">
-      <div class="border-b px-4 py-3 text-sm font-semibold">Pages</div>
-      <div class="space-y-2 p-3">
+  <main class="grid min-h-0 gap-4 lg:grid-cols-[220px_minmax(0,1fr)_360px]">
+    <Card className="min-h-0 overflow-auto p-3">
+      <div class="mb-2 px-1 text-sm font-semibold text-[#5d3438]">{t($locale, 'chapter.pages')}</div>
+      <div class="space-y-2">
         {#each pageThumbs as page}
           <button
-            class={`w-full rounded-md border p-3 text-left text-sm ${currentPageId === page.index ? 'border-slate-900 bg-slate-100' : 'border-slate-200'}`}
+            class={`w-full rounded-3xl border px-3 py-2 text-left text-sm font-medium transition ${
+              currentPageId === page.index
+                ? 'border-[#e18e90] bg-[#f5c088] text-[#160204]'
+                : 'border-[#f0d2b8] bg-white text-[#5d3438] hover:border-[#e18e90] hover:bg-[#fff2e3]'
+            }`}
             on:click={() => activePageId.set(page.index)}
           >
             {page.name}
           </button>
         {/each}
       </div>
-    </aside>
+    </Card>
 
-    <section class="h-full min-w-0 overflow-hidden">
+    <section class="min-h-0 overflow-hidden">
       <Editor store={fabricStore} pageId={currentPageId} />
     </section>
 
-    <section class="h-full overflow-hidden">
+    <section class="min-h-0 overflow-hidden">
       <DataGrid store={fabricStore} pageId={currentPageId} />
     </section>
   </main>

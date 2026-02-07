@@ -1,24 +1,32 @@
 <script lang="ts">
+  import { Card } from '$lib/components/ui/card';
+  import { Button } from '$lib/components/ui/button';
+  import { Input } from '$lib/components/ui/input';
+  import { locale, t } from '$lib/i18n';
+
   export let form: { error?: string; email?: string };
 </script>
 
-<div class="flex min-h-full items-center justify-center bg-slate-50 px-4">
-  <form method="POST" class="w-full max-w-md space-y-4 rounded-xl border bg-white p-8 shadow-sm">
-    <h1 class="text-2xl font-bold">Login</h1>
-    <p class="text-sm text-slate-600">Use <strong>demo@comictrans.local</strong> / <strong>demo123</strong></p>
+<div class="flex min-h-[65vh] items-center justify-center py-6">
+  <form method="POST" class="w-full max-w-md">
+    <Card className="space-y-4 p-8">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#5d3438]">{t($locale, 'login.demo')}</p>
+        <h1 class="mt-2 text-2xl font-semibold text-[#160204]">{t($locale, 'login.title')}</h1>
+      </div>
+      <p class="text-sm text-[#5d3438]">demo@comictrans.local / demo123</p>
 
-    <label class="block text-sm font-medium" for="email">Email</label>
-    <input id="email" name="email" type="email" required value={form?.email ?? ''} class="w-full rounded-md border p-2" />
+      <label class="block text-sm font-medium" for="email">{t($locale, 'login.email')}</label>
+      <Input id="email" name="email" type="email" required value={form?.email ?? ''} />
 
-    <label class="block text-sm font-medium" for="password">Password</label>
-    <input id="password" name="password" type="password" required class="w-full rounded-md border p-2" />
+      <label class="block text-sm font-medium" for="password">{t($locale, 'login.password')}</label>
+      <Input id="password" name="password" type="password" required />
 
-    {#if form?.error}
-      <p class="text-sm text-red-600">{form.error}</p>
-    {/if}
+      {#if form?.error}
+        <p class="rounded-3xl border border-red-200 bg-red-50/80 px-3 py-2 text-sm text-red-700">{form.error}</p>
+      {/if}
 
-    <button class="w-full rounded-md bg-slate-900 px-4 py-2 font-medium text-white" type="submit">
-      Sign in
-    </button>
+      <Button type="submit" className="h-11 w-full rounded-3xl">{t($locale, 'login.title')}</Button>
+    </Card>
   </form>
 </div>

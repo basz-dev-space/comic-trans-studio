@@ -1,5 +1,8 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
+  import { Card } from '$lib/components/ui/card';
+  import { Input } from '$lib/components/ui/input';
+  import { locale, t } from '$lib/i18n';
 
   type TextRow = {
     id: string;
@@ -75,39 +78,42 @@
   });
 </script>
 
-<div class="h-full overflow-hidden border-l bg-white">
-  <div class="border-b px-4 py-3 text-sm font-semibold">Text Data Grid</div>
-  <div class="h-[calc(100%-45px)] overflow-auto">
+<Card className="flex h-full min-h-0 flex-col overflow-hidden p-0">
+  <div class="flex items-center justify-between border-b border-[#E3D5AB] px-4 py-3">
+    <h2 class="text-sm font-semibold text-[#4A351B]">{t($locale, 'grid.title')}</h2>
+    <span class="rounded-full bg-white px-2 py-0.5 text-xs text-[#7A603A]">{rows.length} {t($locale, 'grid.items')}</span>
+  </div>
+  <div class="min-h-0 flex-1 overflow-auto px-2 pb-2">
     <table class="w-full border-collapse text-xs">
-      <thead class="sticky top-0 bg-slate-100">
+      <thead class="sticky top-0 bg-white text-[#7A603A] ">
         <tr>
-          <th class="border-b px-2 py-2 text-left">ID</th>
-          <th class="border-b px-2 py-2 text-left">Text</th>
-          <th class="border-b px-2 py-2 text-left">X</th>
-          <th class="border-b px-2 py-2 text-left">Y</th>
+          <th class="border-b border-[#E3D5AB] px-2 py-2 text-left font-medium">ID</th>
+          <th class="border-b border-[#E3D5AB] px-2 py-2 text-left font-medium">Text</th>
+          <th class="border-b border-[#E3D5AB] px-2 py-2 text-left font-medium">X</th>
+          <th class="border-b border-[#E3D5AB] px-2 py-2 text-left font-medium">Y</th>
         </tr>
       </thead>
       <tbody>
         {#each rows as row}
-          <tr class="align-top">
-            <td class="max-w-[80px] truncate border-b px-2 py-2 font-mono">{row.id}</td>
-            <td class="border-b px-2 py-2">
-              <input
-                class="w-full rounded border px-2 py-1"
+          <tr class="align-top hover:bg-[#FCEFCB]">
+            <td class="max-w-[90px] truncate border-b border-[#E3D5AB] px-2 py-2 font-mono text-[#7A603A]">{row.id}</td>
+            <td class="border-b border-[#E3D5AB] px-2 py-2">
+              <Input
+                className="h-8 rounded-lg bg-white"
                 value={row.text}
                 on:input={(event) => updateItem(row.id, 'text', (event.target as HTMLInputElement).value)}
               />
             </td>
-            <td class="border-b px-2 py-2">
-              <input
-                class="w-20 rounded border px-2 py-1"
+            <td class="border-b border-[#E3D5AB] px-2 py-2">
+              <Input
+                className="h-8 w-20 rounded-lg bg-white"
                 value={row.x}
                 on:input={(event) => updateItem(row.id, 'x', (event.target as HTMLInputElement).value)}
               />
             </td>
-            <td class="border-b px-2 py-2">
-              <input
-                class="w-20 rounded border px-2 py-1"
+            <td class="border-b border-[#E3D5AB] px-2 py-2">
+              <Input
+                className="h-8 w-20 rounded-lg bg-white"
                 value={row.y}
                 on:input={(event) => updateItem(row.id, 'y', (event.target as HTMLInputElement).value)}
               />
@@ -117,4 +123,4 @@
       </tbody>
     </table>
   </div>
-</div>
+</Card>

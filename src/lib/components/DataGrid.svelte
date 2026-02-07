@@ -79,41 +79,41 @@
 </script>
 
 <Card className="flex h-full min-h-0 flex-col overflow-hidden p-0">
-  <div class="flex items-center justify-between border-b border-[#E3D5AB] px-4 py-3">
-    <h2 class="text-sm font-semibold text-[#4A351B]">{t($locale, 'grid.title')}</h2>
-    <span class="rounded-full bg-white px-2 py-0.5 text-xs text-[#7A603A]">{rows.length} {t($locale, 'grid.items')}</span>
+  <div class="sticky top-0 flex items-center justify-between border-b border-[#f0d2b8] bg-white px-4 py-3">
+    <h2 class="text-sm font-bold text-[#160204]">{t($locale, 'grid.title')}</h2>
+    <span class="rounded-full bg-[#f2bc56] px-3 py-1 text-xs font-semibold text-[#160204]">{rows.length} {t($locale, 'grid.items')}</span>
   </div>
-  <div class="min-h-0 flex-1 overflow-auto px-2 pb-2">
+  <div class="min-h-0 flex-1 overflow-auto">
     <table class="w-full border-collapse text-xs">
-      <thead class="sticky top-0 bg-white text-[#7A603A] ">
-        <tr>
-          <th class="border-b border-[#E3D5AB] px-2 py-2 text-left font-medium">ID</th>
-          <th class="border-b border-[#E3D5AB] px-2 py-2 text-left font-medium">Text</th>
-          <th class="border-b border-[#E3D5AB] px-2 py-2 text-left font-medium">X</th>
-          <th class="border-b border-[#E3D5AB] px-2 py-2 text-left font-medium">Y</th>
+      <thead class="sticky top-0 bg-[#fff9fa] text-[#160204]">
+        <tr class="border-b border-[#f0d2b8]">
+          <th class="px-3 py-2 text-left font-semibold text-xs uppercase tracking-wide">ID</th>
+          <th class="px-3 py-2 text-left font-semibold text-xs uppercase tracking-wide">Text</th>
+          <th class="px-3 py-2 text-left font-semibold text-xs uppercase tracking-wide">X</th>
+          <th class="px-3 py-2 text-left font-semibold text-xs uppercase tracking-wide">Y</th>
         </tr>
       </thead>
       <tbody>
-        {#each rows as row}
-          <tr class="align-top hover:bg-[#FCEFCB]">
-            <td class="max-w-[90px] truncate border-b border-[#E3D5AB] px-2 py-2 font-mono text-[#7A603A]">{row.id}</td>
-            <td class="border-b border-[#E3D5AB] px-2 py-2">
+        {#each rows as row, i}
+          <tr class="border-b border-[#f0d2b8] hover:bg-[#f5e8dd] transition-colors {i % 2 === 0 ? 'bg-white' : 'bg-[#fff9fa]'}">
+            <td class="max-w-[80px] truncate px-3 py-2 font-mono text-[#5d3438] text-xs">{row.id}</td>
+            <td class="px-3 py-2">
               <Input
-                className="h-8 rounded-lg bg-white"
+                className="h-8 text-xs border border-[#f0d2b8] bg-white focus:border-[#e18e90]"
                 value={row.text}
                 on:input={(event) => updateItem(row.id, 'text', (event.target as HTMLInputElement).value)}
               />
             </td>
-            <td class="border-b border-[#E3D5AB] px-2 py-2">
+            <td class="px-3 py-2">
               <Input
-                className="h-8 w-20 rounded-lg bg-white"
+                className="h-8 w-16 text-xs border border-[#f0d2b8] bg-white focus:border-[#e18e90]"
                 value={row.x}
                 on:input={(event) => updateItem(row.id, 'x', (event.target as HTMLInputElement).value)}
               />
             </td>
-            <td class="border-b border-[#E3D5AB] px-2 py-2">
+            <td class="px-3 py-2">
               <Input
-                className="h-8 w-20 rounded-lg bg-white"
+                className="h-8 w-16 text-xs border border-[#f0d2b8] bg-white focus:border-[#e18e90]"
                 value={row.y}
                 on:input={(event) => updateItem(row.id, 'y', (event.target as HTMLInputElement).value)}
               />

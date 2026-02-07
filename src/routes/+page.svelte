@@ -7,20 +7,53 @@
   <title>ComicTrans Studio | Translate Comics Faster</title>
 </svelte:head>
 
-<main class="space-y-6 py-4 sm:py-8">
-  <Card className="p-6 sm:p-10">
-    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#5d3438]">{t($locale, 'landing.badge')}</p>
-    <h1 class="mt-3 max-w-5xl text-3xl font-bold leading-tight text-[#160204] sm:text-5xl">{t($locale, 'landing.title')}</h1>
-    <p class="mt-4 max-w-3xl text-[#5d3438]">{t($locale, 'landing.desc')}</p>
-    <div class="mt-7 flex flex-wrap gap-3">
-      <a class="inline-flex h-11 items-center justify-center rounded-3xl bg-[#e18e90] px-4 text-sm font-medium text-[#160204] hover:bg-[#d97b7d]" href="/projects">{t($locale, 'landing.cta.start')}</a>
-      <a class="inline-flex h-11 items-center justify-center rounded-3xl border border-[#f0d2b8] bg-white px-4 text-sm font-medium text-[#160204] hover:bg-[#fff2e3]" href="/login">{t($locale, 'landing.cta.browse')}</a>
+<main class="space-y-10 py-6 sm:py-12">
+  <section class="relative overflow-hidden rounded-[2rem] border border-[#f1d2b8] bg-gradient-soft px-6 py-12 sm:px-10 sm:py-16">
+    <div class="relative z-10 max-w-4xl">
+      <p class="badge-label">{t($locale, 'landing.badge')}</p>
+      <h1 class="text-display-lg mt-4 text-[#160204]">{t($locale, 'landing.title')}</h1>
+      <p class="text-body-lg mt-5 max-w-2xl text-[#5d3438]">{t($locale, 'landing.desc')}</p>
+      <div class="mt-8 flex flex-wrap gap-4">
+        <a class="group inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#e18e90] px-6 text-sm font-semibold text-white shadow-elevation-2 transition-all hover:bg-[#d97b7d] hover:shadow-elevation-3" href="/projects">{t($locale, 'landing.cta.start')} →</a>
+        <a class="inline-flex h-12 items-center justify-center gap-2 rounded-full border-2 border-[#e18e90] bg-white px-6 text-sm font-semibold text-[#e18e90] transition-all hover:bg-[#f5e8dd]" href="/login">{t($locale, 'landing.cta.browse')}</a>
+      </div>
     </div>
-  </Card>
+    <div class="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-[#f2bc56] opacity-20 blur-3xl"></div>
+    <div class="absolute -bottom-16 right-1/4 h-32 w-32 rounded-full bg-[#e18e90] opacity-10 blur-3xl"></div>
+  </section>
 
-  <section class="grid gap-4 md:grid-cols-3">
-    <Card className="p-6"><h2 class="font-semibold text-[#160204]">{t($locale, 'landing.kpi.projects')}</h2><p class="mt-2 text-sm text-[#5d3438]">{t($locale, 'landing.kpi.projectsDesc')}</p></Card>
-    <Card className="p-6"><h2 class="font-semibold text-[#160204]">{t($locale, 'landing.kpi.editor')}</h2><p class="mt-2 text-sm text-[#5d3438]">{t($locale, 'landing.kpi.editorDesc')}</p></Card>
-    <Card className="p-6"><h2 class="font-semibold text-[#160204]">{t($locale, 'landing.kpi.export')}</h2><p class="mt-2 text-sm text-[#5d3438]">{t($locale, 'landing.kpi.exportDesc')}</p></Card>
+  <section class="grid gap-6 md:grid-cols-3">
+    <div class="group relative overflow-hidden rounded-2xl border border-[#f1d2b8] bg-white p-8 shadow-elevation-1 transition-all hover:shadow-elevation-2">
+      <div class="absolute top-0 right-0 text-7xl font-bold text-[#f2bc56] opacity-10 group-hover:opacity-20 transition-opacity">01</div>
+      <div class="relative z-10">
+        <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff0e8]">
+          <span class="text-2xl font-bold text-[#e18e90]">📁</span>
+        </div>
+        <h3 class="text-heading-md mb-3 text-[#160204]">{t($locale, 'landing.kpi.projects')}</h3>
+        <p class="text-body-md text-[#5d3438] leading-relaxed">{t($locale, 'landing.kpi.projectsDesc')}</p>
+      </div>
+    </div>
+
+    <div class="group relative overflow-hidden rounded-2xl border border-[#f1d2b8] bg-white p-8 shadow-elevation-1 transition-all hover:shadow-elevation-2">
+      <div class="absolute top-0 right-0 text-7xl font-bold text-[#f2bc56] opacity-10 group-hover:opacity-20 transition-opacity">02</div>
+      <div class="relative z-10">
+        <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff0e8]">
+          <span class="text-2xl font-bold text-[#e18e90]">✏️</span>
+        </div>
+        <h3 class="text-heading-md mb-3 text-[#160204]">{t($locale, 'landing.kpi.editor')}</h3>
+        <p class="text-body-md text-[#5d3438] leading-relaxed">{t($locale, 'landing.kpi.editorDesc')}</p>
+      </div>
+    </div>
+
+    <div class="group relative overflow-hidden rounded-2xl border border-[#f1d2b8] bg-white p-8 shadow-elevation-1 transition-all hover:shadow-elevation-2">
+      <div class="absolute top-0 right-0 text-7xl font-bold text-[#f2bc56] opacity-10 group-hover:opacity-20 transition-opacity">03</div>
+      <div class="relative z-10">
+        <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff0e8]">
+          <span class="text-2xl font-bold text-[#e18e90]">📦</span>
+        </div>
+        <h3 class="text-heading-md mb-3 text-[#160204]">{t($locale, 'landing.kpi.export')}</h3>
+        <p class="text-body-md text-[#5d3438] leading-relaxed">{t($locale, 'landing.kpi.exportDesc')}</p>
+      </div>
+    </div>
   </section>
 </main>

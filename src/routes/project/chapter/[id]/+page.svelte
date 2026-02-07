@@ -92,46 +92,57 @@
   });
 </script>
 
-<div class="grid h-full min-h-[72vh] grid-rows-[auto_1fr] gap-4 pb-2">
-  <Card className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-    <div>
-      <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#5d3438]">{t($locale, 'chapter.badge')}</p>
-      <div class="text-sm font-semibold text-[#160204]">{data.chapterName}</div>
-    </div>
-    <div class="flex flex-wrap items-center gap-2">
-      <a class="inline-flex h-10 items-center justify-center rounded-3xl border border-[#f0d2b8] bg-white px-4 text-sm font-medium text-[#160204] hover:bg-[#fff2e3]" href={`/project/${data.projectId}`}>{t($locale, 'chapter.back')}</a>
-      <Button on:click={createPage} className="rounded-3xl">{t($locale, 'chapter.newPage')}</Button>
-      <Button variant="outline" on:click={addText} className="rounded-3xl">{t($locale, 'chapter.addText')}</Button>
-      <Button variant="outline" on:click={quickAdd} className="rounded-3xl bg-[#f5c088]">{t($locale, 'chapter.quick')}</Button>
-      <Button variant="outline" on:click={() => exportProjectZip(fabricStore)} className="rounded-3xl">{t($locale, 'chapter.exportZip')}</Button>
-      <Button variant="outline" on:click={() => exportProjectPdf(fabricStore)} className="rounded-3xl">{t($locale, 'chapter.exportPdf')}</Button>
-    </div>
-  </Card>
-
-  <main class="grid min-h-0 gap-4 lg:grid-cols-[220px_minmax(0,1fr)_360px]">
-    <Card className="min-h-0 overflow-auto p-3">
-      <div class="mb-2 px-1 text-sm font-semibold text-[#5d3438]">{t($locale, 'chapter.pages')}</div>
-      <div class="space-y-2">
-        {#each pageThumbs as page}
-          <button
-            class={`w-full rounded-3xl border px-3 py-2 text-left text-sm font-medium transition ${
-              currentPageId === page.index
-                ? 'border-[#e18e90] bg-[#f5c088] text-[#160204]'
-                : 'border-[#f0d2b8] bg-white text-[#5d3438] hover:border-[#e18e90] hover:bg-[#fff2e3]'
-            }`}
-            on:click={() => activePageId.set(page.index)}
-          >
-            {page.name}
-          </button>
-        {/each}
+<div class="grid h-full min-h-[80vh] grid-rows-[auto_1fr] gap-5 pb-3">
+  <div class="rounded-2xl border border-[#f1d2b8] bg-white p-4 shadow-elevation-1 sm:p-5">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="badge-label">{t($locale, 'chapter.badge')}</p>
+        <h1 class="text-heading-lg mt-2 text-[#160204]">{data.chapterName}</h1>
       </div>
-    </Card>
+      <a class="inline-flex h-10 items-center justify-center gap-1 rounded-full border-2 border-[#e18e90] bg-white px-5 text-sm font-semibold text-[#e18e90] transition-all hover:bg-[#f5e8dd]" href={`/project/${data.projectId}`}>← {t($locale, 'chapter.back')}</a>
+    </div>
 
-    <section class="min-h-0 overflow-hidden">
+    <div class="mt-4 flex flex-wrap gap-2 pt-4 border-t border-[#f0d2b8]">
+      <Button on:click={createPage} className="h-10 rounded-lg bg-[#e18e90] hover:bg-[#d97b7d] text-white text-sm font-semibold px-4">{t($locale, 'chapter.newPage')}</Button>
+      <Button variant="outline" on:click={addText} className="h-10 rounded-lg text-sm font-semibold px-4">{t($locale, 'chapter.addText')}</Button>
+      <Button variant="outline" on:click={quickAdd} className="h-10 rounded-lg bg-[#f5c088] hover:bg-[#e6a844] text-[#160204] font-semibold text-sm px-4">{t($locale, 'chapter.quick')}</Button>
+      <div class="ml-auto flex gap-2">
+        <Button variant="outline" on:click={() => exportProjectZip(fabricStore)} className="h-10 rounded-lg text-sm font-semibold px-4">📦 {t($locale, 'chapter.exportZip')}</Button>
+        <Button variant="outline" on:click={() => exportProjectPdf(fabricStore)} className="h-10 rounded-lg text-sm font-semibold px-4">📄 {t($locale, 'chapter.exportPdf')}</Button>
+      </div>
+    </div>
+  </div>
+
+  <main class="grid min-h-0 gap-5 lg:grid-cols-[240px_minmax(0,1fr)_380px]">
+    <div class="min-h-0 overflow-hidden rounded-2xl border border-[#f1d2b8] bg-white shadow-elevation-1 flex flex-col">
+      <div class="sticky top-0 bg-white border-b border-[#f0d2b8] px-4 py-3">
+        <h2 class="text-sm font-semibold text-[#160204]">{t($locale, 'chapter.pages')}</h2>
+        <p class="text-xs text-[#5d3438] mt-1">{pageThumbs.length} page{pageThumbs.length !== 1 ? 's' : ''}</p>
+      </div>
+      <div class="flex-1 overflow-auto px-3 py-3">
+        <div class="space-y-2">
+          {#each pageThumbs as page}
+            <button
+              class={`w-full rounded-lg border-2 px-3 py-2 text-left text-sm font-medium transition-all ${
+                currentPageId === page.index
+                  ? 'border-[#e18e90] bg-[#f5c088] text-[#160204] shadow-elevation-1'
+                  : 'border-[#f0d2b8] bg-[#fff9fa] text-[#5d3438] hover:border-[#e18e90] hover:bg-white'
+              }`}
+              on:click={() => activePageId.set(page.index)}
+            >
+              <span class="inline-block w-5 h-5 mr-2 rounded bg-[#e18e90] text-white text-xs text-center leading-5 font-bold">{page.index + 1}</span>
+              {page.name}
+            </button>
+          {/each}
+        </div>
+      </div>
+    </div>
+
+    <section class="min-h-0 overflow-hidden rounded-2xl border border-[#f1d2b8] bg-white shadow-elevation-1">
       <Editor store={fabricStore} pageId={currentPageId} />
     </section>
 
-    <section class="min-h-0 overflow-hidden">
+    <section class="min-h-0 overflow-hidden rounded-2xl border border-[#f1d2b8] bg-white shadow-elevation-1 flex flex-col">
       <DataGrid store={fabricStore} pageId={currentPageId} />
     </section>
   </main>

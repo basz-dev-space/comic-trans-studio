@@ -1,6 +1,5 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button';
-  import { Card } from '$lib/components/ui/card';
   import { Input } from '$lib/components/ui/input';
   import { locale, t } from '$lib/i18n';
 
@@ -21,7 +20,7 @@
     <div>
       <p class="badge-label">{t($locale, 'project.badge')}</p>
       <h1 class="text-display-md mt-3 text-[#160204]">{data.project.name}</h1>
-      <p class="text-body-md mt-2 text-[#5d3438]">{data.chapters.length} chapter{data.chapters.length !== 1 ? 's' : ''}</p>
+      <p class="text-body-md mt-2 text-[#5d3438]">{data.chapters.length} {t($locale, 'project.chapterCount')}</p>
     </div>
     <a class="inline-flex h-11 items-center justify-center gap-2 rounded-full border-2 border-[#e18e90] bg-white px-6 text-sm font-semibold text-[#e18e90] transition-all hover:bg-[#f5e8dd]" href="/projects">← {t($locale, 'project.back')}</a>
   </div>
@@ -37,8 +36,8 @@
   <section class="space-y-3">
     {#if data.chapters.length === 0}
       <div class="rounded-2xl border-2 border-dashed border-[#f0d2b8] bg-[#fff0e8] px-8 py-12 text-center">
-        <p class="text-2xl font-bold text-[#160204] mb-2">📖 No chapters yet</p>
-        <p class="text-[#5d3438]">Create your first chapter to start translating</p>
+        <p class="mb-2 text-2xl font-bold text-[#160204]">{t($locale, 'project.emptyTitle')}</p>
+        <p class="text-[#5d3438]">{t($locale, 'project.emptyDesc')}</p>
       </div>
     {:else}
       <ul class="space-y-3">
@@ -54,7 +53,7 @@
                       <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#f2bc56] text-sm font-bold text-[#160204]">{index + 1}</span>
                       <a class="text-heading-sm font-bold text-[#160204] hover:text-[#e18e90] transition-colors" href={`/project/chapter/${chapter.id}`}>{chapter.name}</a>
                     </div>
-                    <p class="text-body-sm text-[#5d3438]">Ready to edit</p>
+                    <p class="text-body-sm text-[#5d3438]">{t($locale, 'project.readyToEdit')}</p>
                   </div>
 
                   <div class="flex w-full gap-2 sm:w-auto sm:flex-wrap justify-start">

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Card } from '$lib/components/ui/card';
   import { locale, t } from '$lib/i18n';
 </script>
 

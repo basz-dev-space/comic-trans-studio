@@ -30,6 +30,9 @@ const messages: Record<Locale, Record<string, string>> = {
     'login.email': 'Email',
     'login.password': 'Password',
     'login.demo': 'Demo',
+    'login.demoCredentials': 'Demo credentials',
+    'login.errorTitle': 'Error',
+    'login.demoAccess': 'Demo access · No registration required',
 
     'projects.badge': 'Workspace',
     'projects.title': 'Projects',
@@ -37,6 +40,9 @@ const messages: Record<Locale, Record<string, string>> = {
     'projects.new': 'Create project',
     'projects.placeholder': 'Project name',
     'projects.open': 'Open',
+    'projects.emptyTitle': '✨ Ready to create?',
+    'projects.emptyDesc': 'Start your first comic translation project above',
+    'projects.projectLabel': 'Project',
 
     'project.badge': 'Project',
     'project.back': 'Back to projects',
@@ -46,6 +52,10 @@ const messages: Record<Locale, Record<string, string>> = {
     'project.rename': 'Rename',
     'project.delete': 'Delete',
     'project.open': 'Open chapter',
+    'project.chapterCount': 'chapters',
+    'project.emptyTitle': '📖 No chapters yet',
+    'project.emptyDesc': 'Create your first chapter to start translating',
+    'project.readyToEdit': 'Ready to edit',
 
     'chapter.badge': 'Chapter studio',
     'chapter.back': 'Back',
@@ -55,6 +65,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'chapter.exportZip': 'Export ZIP',
     'chapter.exportPdf': 'Export PDF',
     'chapter.pages': 'Pages',
+    'chapter.pageCount': 'pages',
 
     'grid.title': 'Text Data Grid',
     'grid.items': 'items',
@@ -86,6 +97,9 @@ const messages: Record<Locale, Record<string, string>> = {
     'login.email': 'อีเมล',
     'login.password': 'รหัสผ่าน',
     'login.demo': 'เดโม',
+    'login.demoCredentials': 'บัญชีเดโม',
+    'login.errorTitle': 'ข้อผิดพลาด',
+    'login.demoAccess': 'เข้าใช้งานเดโม · ไม่ต้องลงทะเบียน',
 
     'projects.badge': 'พื้นที่ทำงาน',
     'projects.title': 'โปรเจกต์',
@@ -93,6 +107,9 @@ const messages: Record<Locale, Record<string, string>> = {
     'projects.new': 'สร้างโปรเจกต์',
     'projects.placeholder': 'ชื่อโปรเจกต์',
     'projects.open': 'เปิด',
+    'projects.emptyTitle': '✨ พร้อมเริ่มสร้างหรือยัง?',
+    'projects.emptyDesc': 'เริ่มโปรเจกต์แปลคอมิกแรกของคุณได้จากด้านบน',
+    'projects.projectLabel': 'โปรเจกต์',
 
     'project.badge': 'โปรเจกต์',
     'project.back': 'กลับไปหน้าโปรเจกต์',
@@ -102,6 +119,10 @@ const messages: Record<Locale, Record<string, string>> = {
     'project.rename': 'เปลี่ยนชื่อ',
     'project.delete': 'ลบ',
     'project.open': 'เปิดบท',
+    'project.chapterCount': 'บท',
+    'project.emptyTitle': '📖 ยังไม่มีบท',
+    'project.emptyDesc': 'สร้างบทแรกเพื่อเริ่มแปลได้เลย',
+    'project.readyToEdit': 'พร้อมแก้ไข',
 
     'chapter.badge': 'สตูดิโอบท',
     'chapter.back': 'กลับ',
@@ -111,6 +132,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'chapter.exportZip': 'ส่งออก ZIP',
     'chapter.exportPdf': 'ส่งออก PDF',
     'chapter.pages': 'หน้า',
+    'chapter.pageCount': 'หน้า',
 
     'grid.title': 'ตารางข้อความ',
     'grid.items': 'รายการ',

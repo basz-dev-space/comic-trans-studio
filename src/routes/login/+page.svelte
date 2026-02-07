@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import { locale, t } from '$lib/i18n';
@@ -20,7 +19,7 @@
 
       <form method="POST" class="space-y-5 p-8">
         <div class="rounded-lg bg-[#fff0e8] border border-[#f3d7be] p-3">
-          <p class="text-xs font-medium text-[#5d3438] mb-1">Demo Credentials:</p>
+          <p class="mb-1 text-xs font-medium text-[#5d3438]">{t($locale, 'login.demoCredentials')}:</p>
           <p class="text-sm font-mono text-[#160204]">demo@comictrans.local</p>
           <p class="text-sm font-mono text-[#160204]">demo123</p>
         </div>
@@ -37,7 +36,7 @@
 
         {#if form?.error}
           <div class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <p class="font-semibold mb-1">Error</p>
+            <p class="mb-1 font-semibold">{t($locale, 'login.errorTitle')}</p>
             <p>{form.error}</p>
           </div>
         {/if}
@@ -46,7 +45,7 @@
       </form>
 
       <div class="border-t border-[#f0d2b8] px-8 py-4 text-center text-xs text-[#5d3438]">
-        <p>Demo access · No registration required</p>
+        <p>{t($locale, 'login.demoAccess')}</p>
       </div>
     </div>
   </div>

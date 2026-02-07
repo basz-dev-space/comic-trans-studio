@@ -29,6 +29,8 @@
 
   let activeRightTab: 'properties' | 'datagrid' = 'datagrid';
 
+  let detachResizeListeners: undefined | (() => void);
+
   onMount(() => {
     fabricStore.loadJSON({ pages: data.pages, activePageId: 0 });
     activePageId.set(0);
@@ -95,6 +97,8 @@
 
   const dragResize = (side: 'left' | 'right', event: MouseEvent) => {
     event.preventDefault();
+    detachResizeListeners?.();
+
     const startX = event.clientX;
     const initialLeft = leftPanelWidth;
     const initialRight = rightPanelWidth;
@@ -111,8 +115,13 @@
     };
 
     const onUp = () => {
+      detachResizeListeners?.();
+    };
+
+    detachResizeListeners = () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      detachResizeListeners = undefined;
     };
 
     window.addEventListener('mousemove', onMove);
@@ -123,6 +132,7 @@
     pageStateUnsubscribe();
     storeChangeUnsubscribe();
     if (saveTimer) clearTimeout(saveTimer);
+    detachResizeListeners?.();
   });
 </script>
 

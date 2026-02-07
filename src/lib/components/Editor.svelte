@@ -220,10 +220,19 @@
     savePageState();
   };
 
+
+  const fileToDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('Unable to read file'));
+      reader.readAsDataURL(file);
+    });
+
   const uploadOverlayImage = async (event: Event) => {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    const src = URL.createObjectURL(file);
+    const src = await fileToDataUrl(file);
 
     try {
       const image = await FabricImage.fromURL(src);
@@ -233,7 +242,6 @@
       fabricCanvas.setActiveObject(image);
       savePageState();
     } finally {
-      URL.revokeObjectURL(src);
       if (fileInputEl) fileInputEl.value = '';
     }
   };

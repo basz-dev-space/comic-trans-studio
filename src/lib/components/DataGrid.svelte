@@ -67,6 +67,10 @@
     const page = store?.pages?.[pageId];
     if (!page) return;
 
+    if (!Array.isArray(page.objects)) {
+      page.objects = [];
+    }
+
     page.objects.push({
       id: `obj_${Math.random().toString(36).slice(2, 10)}`,
       type: 'i-text',

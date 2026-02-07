@@ -52,6 +52,26 @@ export const handle: Handle = async ({ event, resolve }) => {
       }
     }
 
+
+    if (segments[0] === 'project' && segments[1] && event.request.method === 'POST') {
+      const actionKeys = [...event.url.searchParams.keys()];
+      const actionKey = actionKeys[0] ?? '';
+      const requiresChapterValidation = actionKey === '/renameChapter' || actionKey === '/deleteChapter';
+
+      if (requiresChapterValidation) {
+        try {
+          const form = await event.request.clone().formData();
+          const chapterId = String(form.get('chapterId') ?? '');
+          const chapter = db.getChapterById(chapterId);
+          if (!chapter || chapter.projectId !== segments[1]) {
+            return forbidden(pathname);
+          }
+        } catch {
+          return forbidden(pathname);
+        }
+      }
+    }
+
     if (segments[0] === 'api' && segments[1] === 'project' && segments[2]) {
       const project = db.getProjectById(segments[2]);
       if (!project || project.ownerId !== user.id) {

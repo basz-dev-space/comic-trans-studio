@@ -1,3 +1,4 @@
+import { error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/data';
 
@@ -19,17 +20,29 @@ export const actions: Actions = {
     db.createChapter(project.id, name);
     return { success: true };
   },
-  renameChapter: async ({ request }) => {
+  renameChapter: async ({ request, params }) => {
     const data = await request.formData();
     const chapterId = String(data.get('chapterId') ?? '');
     const name = String(data.get('name') ?? '').trim();
-    if (chapterId && name) db.renameChapter(chapterId, name);
+    const chapter = db.getChapterById(chapterId);
+
+    if (!chapter || chapter.projectId !== params.id) {
+      throw error(403, 'Forbidden');
+    }
+
+    if (name) db.renameChapter(chapterId, name);
     return { success: true };
   },
-  deleteChapter: async ({ request }) => {
+  deleteChapter: async ({ request, params }) => {
     const data = await request.formData();
     const chapterId = String(data.get('chapterId') ?? '');
-    if (chapterId) db.deleteChapter(chapterId);
+    const chapter = db.getChapterById(chapterId);
+
+    if (!chapter || chapter.projectId !== params.id) {
+      throw error(403, 'Forbidden');
+    }
+
+    db.deleteChapter(chapterId);
     return { success: true };
   }
 };

@@ -3,26 +3,36 @@
 Production-ready comic translation editor built with SvelteKit + TypeScript + Tailwind + Fabric.js.
 
 ## Features
-- SPA-only editor (`ssr = false`, `prerender = false`)
-- Multi-page canvas workflow
-- Text-object data grid (`ID | Text | X | Y`) with debounced sync
-- Base64 image upload
-- Export ZIP (`project.json` + page PNG files)
-- Export PDF (one page per canvas)
 
 ## Run
+# ComicTrans Studio
+
+ComicTrans Studio is a fullstack web application for translating and editing comics. It provides a canvas-first editor (Fabric.js) and content workflows powered by SvelteKit, TypeScript, Vite, and Tailwind CSS.
+
+**Overview:**
+- Frontend: SvelteKit + Svelte 5, Vite, Tailwind CSS.
+- Canvas: Fabric.js for drawing and layout.
+- Backend: SvelteKit server routes and APIs bundled with the app.
+- Extensibility: AI agent "skills" live under `.agents/skills/` and provide modular automation for tasks like code generation, design, or content processing.
+
+**Agents & Integrations:**
+- This project is integrated with multiple agent/assistant tools and may use several providers concurrently. Examples in use or setup notes:
+	- https://chatgpt.com/codex (Leader / main)
+	- https://cto.new/account/workspace/tasks
+	- https://app.kilo.ai/cloud
+	- VS Code Copilot
+	- Additional agents may be added in the future; skills are stored in `.agents/skills/`.
+
+**Quick start (dev):**
 ```bash
 npm install
 npm run dev
 ```
 
-## Build
+**Build & preview:**
 ```bash
 npm run build
 npm run preview
 ```
 
-## Project Notes
-- Canvas implementation is based on Fabric.js.
-- Agent metadata and skill manifest are tracked in `.xxx/skills/`.
-- MCP configuration is available in `mcp.config.json`.
+For contributor notes and agent governance, see `AGENTS.md`.

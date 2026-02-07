@@ -9,5 +9,5 @@
 ## AI Update Rule
 - Any AI agent modifying this repository must also update:
   - `AGENTS.md` when behavioral or governance rules change.
-  - `.xxx/skills/` metadata when agent skills are added or removed.
+  - `.agents/skills/` metadata when agent skills are added or removed.
   - `mcp.config.json` when MCP endpoints are added or changed.

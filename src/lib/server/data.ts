@@ -1,3 +1,5 @@
+import { randomBytes, randomUUID } from 'node:crypto';
+
 export type ChapterPage = {
   id: string;
   name: string;
@@ -47,6 +49,13 @@ const chapters: Chapter[] = [
 const sessions = new Map<string, string>();
 
 const uid = (prefix: string) => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+const secureToken = () => {
+  try {
+    return randomUUID();
+  } catch {
+    return randomBytes(32).toString('hex');
+  }
+};
 
 export const db = {
   findUserByCredentials(email: string, password: string) {
@@ -57,7 +66,7 @@ export const db = {
     return users.find((user) => user.id === userId) ?? null;
   },
   createSession(userId: string) {
-    const token = uid('sess');
+    const token = secureToken();
     sessions.set(token, userId);
     return token;
   },

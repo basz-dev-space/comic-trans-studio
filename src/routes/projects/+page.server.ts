@@ -1,10 +1,8 @@
-import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/data';
 
 export const load: PageServerLoad = ({ locals }) => {
-  const user = locals.user;
-  if (!user) throw redirect(303, '/login');
+  const user = locals.user!;
 
   return {
     user: { id: user.id, name: user.name },
@@ -14,9 +12,7 @@ export const load: PageServerLoad = ({ locals }) => {
 
 export const actions: Actions = {
   createProject: async ({ request, locals }) => {
-    const user = locals.user;
-    if (!user) throw redirect(303, '/login');
-
+    const user = locals.user!;
     const data = await request.formData();
     const name = String(data.get('name') ?? '').trim() || 'Untitled Project';
     db.createProject(user.id, name);

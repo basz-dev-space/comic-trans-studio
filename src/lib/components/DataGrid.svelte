@@ -1,5 +1,8 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
+  import { Card } from '$lib/components/ui/card';
+  import { Input } from '$lib/components/ui/input';
+  import { locale, t } from '$lib/i18n';
 
   type TextRow = {
     id: string;
@@ -75,39 +78,42 @@
   });
 </script>
 
-<div class="h-full overflow-hidden border-l bg-white">
-  <div class="border-b px-4 py-3 text-sm font-semibold">Text Data Grid</div>
-  <div class="h-[calc(100%-45px)] overflow-auto">
+<Card className="flex h-full min-h-0 flex-col overflow-hidden p-0">
+  <div class="sticky top-0 flex items-center justify-between border-b border-[#f0d2b8] bg-white px-4 py-3">
+    <h2 class="text-sm font-bold text-[#160204]">{t($locale, 'grid.title')}</h2>
+    <span class="rounded-full bg-[#f2bc56] px-3 py-1 text-xs font-semibold text-[#160204]">{rows.length} {t($locale, 'grid.items')}</span>
+  </div>
+  <div class="min-h-0 flex-1 overflow-auto">
     <table class="w-full border-collapse text-xs">
-      <thead class="sticky top-0 bg-slate-100">
-        <tr>
-          <th class="border-b px-2 py-2 text-left">ID</th>
-          <th class="border-b px-2 py-2 text-left">Text</th>
-          <th class="border-b px-2 py-2 text-left">X</th>
-          <th class="border-b px-2 py-2 text-left">Y</th>
+      <thead class="sticky top-0 bg-[#fff9fa] text-[#160204]">
+        <tr class="border-b border-[#f0d2b8]">
+          <th class="px-3 py-2 text-left font-semibold text-xs uppercase tracking-wide">ID</th>
+          <th class="px-3 py-2 text-left font-semibold text-xs uppercase tracking-wide">Text</th>
+          <th class="px-3 py-2 text-left font-semibold text-xs uppercase tracking-wide">X</th>
+          <th class="px-3 py-2 text-left font-semibold text-xs uppercase tracking-wide">Y</th>
         </tr>
       </thead>
       <tbody>
-        {#each rows as row}
-          <tr class="align-top">
-            <td class="max-w-[80px] truncate border-b px-2 py-2 font-mono">{row.id}</td>
-            <td class="border-b px-2 py-2">
-              <input
-                class="w-full rounded border px-2 py-1"
+        {#each rows as row, i}
+          <tr class="border-b border-[#f0d2b8] hover:bg-[#f5e8dd] transition-colors {i % 2 === 0 ? 'bg-white' : 'bg-[#fff9fa]'}">
+            <td class="max-w-[80px] truncate px-3 py-2 font-mono text-[#5d3438] text-xs">{row.id}</td>
+            <td class="px-3 py-2">
+              <Input
+                className="h-8 text-xs border border-[#f0d2b8] bg-white focus:border-[#e18e90]"
                 value={row.text}
                 on:input={(event) => updateItem(row.id, 'text', (event.target as HTMLInputElement).value)}
               />
             </td>
-            <td class="border-b px-2 py-2">
-              <input
-                class="w-20 rounded border px-2 py-1"
+            <td class="px-3 py-2">
+              <Input
+                className="h-8 w-16 text-xs border border-[#f0d2b8] bg-white focus:border-[#e18e90]"
                 value={row.x}
                 on:input={(event) => updateItem(row.id, 'x', (event.target as HTMLInputElement).value)}
               />
             </td>
-            <td class="border-b px-2 py-2">
-              <input
-                class="w-20 rounded border px-2 py-1"
+            <td class="px-3 py-2">
+              <Input
+                className="h-8 w-16 text-xs border border-[#f0d2b8] bg-white focus:border-[#e18e90]"
                 value={row.y}
                 on:input={(event) => updateItem(row.id, 'y', (event.target as HTMLInputElement).value)}
               />
@@ -117,4 +123,4 @@
       </tbody>
     </table>
   </div>
-</div>
+</Card>

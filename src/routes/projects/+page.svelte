@@ -1,6 +1,5 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button';
-  import { Card } from '$lib/components/ui/card';
   import { Input } from '$lib/components/ui/input';
   import { locale, t } from '$lib/i18n';
 
@@ -30,8 +29,8 @@
   <section class="space-y-4">
     {#if data.projects.length === 0}
       <div class="rounded-2xl border-2 border-dashed border-[#f0d2b8] bg-[#fff0e8] px-8 py-12 text-center">
-        <p class="text-2xl font-bold text-[#160204] mb-2">✨ Ready to create?</p>
-        <p class="text-[#5d3438]">Start your first comic translation project above</p>
+        <p class="mb-2 text-2xl font-bold text-[#160204]">{t($locale, 'projects.emptyTitle')}</p>
+        <p class="text-[#5d3438]">{t($locale, 'projects.emptyDesc')}</p>
       </div>
     {:else}
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -45,7 +44,7 @@
               </div>
               <div class="flex items-center gap-3 pt-2">
                 <div class="flex-1">
-                  <span class="inline-block rounded-full bg-[#fff0e8] px-3 py-1 text-xs font-semibold text-[#e18e90]">Project</span>
+                  <span class="inline-block rounded-full bg-[#fff0e8] px-3 py-1 text-xs font-semibold text-[#e18e90]">{t($locale, 'projects.projectLabel')}</span>
                 </div>
                 <a class="inline-flex h-10 items-center justify-center gap-1 rounded-full bg-[#e18e90] px-5 text-xs font-semibold text-white shadow-elevation-1 transition-all hover:bg-[#d97b7d] hover:shadow-elevation-2" href={`/project/${project.id}`}>
                   {t($locale, 'projects.open')} →

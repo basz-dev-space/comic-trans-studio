@@ -3,7 +3,6 @@
   import DataGrid from '$lib/components/DataGrid.svelte';
   import Editor from '$lib/components/Editor.svelte';
   import { Button } from '$lib/components/ui/button';
-  import { Card } from '$lib/components/ui/card';
   import { activePageId, debouncedStoreChange, fabricStore } from '$lib/services/fabric';
   import { exportProjectPdf, exportProjectZip } from '$lib/utils/export';
   import { locale, t } from '$lib/i18n';
@@ -117,7 +116,7 @@
     <div class="min-h-0 overflow-hidden rounded-2xl border border-[#f1d2b8] bg-white shadow-elevation-1 flex flex-col">
       <div class="sticky top-0 bg-white border-b border-[#f0d2b8] px-4 py-3">
         <h2 class="text-sm font-semibold text-[#160204]">{t($locale, 'chapter.pages')}</h2>
-        <p class="text-xs text-[#5d3438] mt-1">{pageThumbs.length} page{pageThumbs.length !== 1 ? 's' : ''}</p>
+        <p class="mt-1 text-xs text-[#5d3438]">{pageThumbs.length} {t($locale, 'chapter.pageCount')}</p>
       </div>
       <div class="flex-1 overflow-auto px-3 py-3">
         <div class="space-y-2">

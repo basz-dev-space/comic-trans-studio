@@ -6,9 +6,11 @@
 
   type TextRow = {
     id: string;
+    originalText: string;
     text: string;
     x: number;
     y: number;
+    fontSize: number;
   };
 
   export let store: any;
@@ -16,78 +18,49 @@
 
   let rows: TextRow[] = [];
   let unsubscribe: undefined | (() => void);
-  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
-  let internalUpdate = false;
 
   const loadRows = () => {
     const page = store?.pages?.[pageId];
-    if (!page) {
-      rows = [];
-      return;
-    }
-
-    rows = (page.objects || [])
-      .filter((item: any) => item.type === 'i-text' || item.type === 'textbox' || item.type === 'text')
-      .map((item: any) => ({
-        id: item.id,
-        text: String(item.text || ''),
-        x: Number(item.left || 0),
-        y: Number(item.top || 0)
-      }));
+    rows = (page?.textBoxes || []).map((item: any) => ({
+      id: item.id,
+      originalText: String(item.originalText || ''),
+      text: String(item.text || ''),
+      x: Number(item.geometry?.x || 0),
+      y: Number(item.geometry?.y || 0),
+      fontSize: Number(item.style?.fontSize || 0)
+    }));
   };
 
-  const scheduleRowsReload = () => {
-    if (internalUpdate) return;
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(loadRows, 30);
-  };
-
-  const updateItem = (id: string, key: 'text' | 'x' | 'y', value: string) => {
-    const page = store?.pages?.[pageId];
-    if (!page) return;
-
-    const item = (page.objects || []).find((obj: any) => obj.id === id);
-    if (!item) return;
-
-    internalUpdate = true;
-
-    if (key === 'text') item.text = value;
-    if (key === 'x' && !Number.isNaN(Number(value))) item.left = Number(value);
-    if (key === 'y' && !Number.isNaN(Number(value))) item.top = Number(value);
-
-    store.notify();
+  const updateItem = (id: string, key: 'text' | 'x' | 'y' | 'fontSize', value: string) => {
+    if (key === 'text') store.syncGridToCanvas(id, { text: value });
+    if (key === 'x' && !Number.isNaN(Number(value)))
+      store.syncGridToCanvas(id, { geometry: { x: Number(value) } });
+    if (key === 'y' && !Number.isNaN(Number(value)))
+      store.syncGridToCanvas(id, { geometry: { y: Number(value) } });
+    if (key === 'fontSize' && !Number.isNaN(Number(value)))
+      store.syncGridToCanvas(id, { style: { fontSize: Number(value) } });
     loadRows();
-
-    setTimeout(() => {
-      internalUpdate = false;
-    }, 0);
   };
 
   const addRow = () => {
-    const page = store?.pages?.[pageId];
-    if (!page) return;
-
-    if (!Array.isArray(page.objects)) {
-      page.objects = [];
-    }
-
-    page.objects.push({
-      id: `obj_${Math.random().toString(36).slice(2, 10)}`,
-      type: 'i-text',
+    store.syncCanvasToGrid({
       text: 'New text',
+      originalText: 'New text',
       left: 60,
       top: 60,
-      fontSize: 36,
-      fill: '#111827'
+      width: 260,
+      height: 90,
+      fontSize: 32,
+      fill: '#ffffff',
+      backgroundColor: 'rgba(15,23,42,0.65)'
     });
-
     store.notify();
     loadRows();
   };
 
   onMount(() => {
     loadRows();
-    unsubscribe = store.onChange(scheduleRowsReload);
+    unsubscribe = store.onChange(loadRows);
   });
 
   $: if (store && typeof pageId === 'number') {
@@ -96,56 +69,41 @@
 
   onDestroy(() => {
     unsubscribe?.();
-    if (debounceTimer) clearTimeout(debounceTimer);
   });
 </script>
 
 <Card className="flex h-full min-h-0 flex-col overflow-hidden p-0">
-  <div class="sticky top-0 flex items-center justify-between border-b border-[#f0d2b8] bg-white px-4 py-3">
-    <h2 class="text-sm font-bold text-[#160204]">{t($locale, 'grid.title')}</h2>
+  <div class="sticky top-0 flex items-center justify-between border-b border-[#2a3555] bg-[#0b1020] px-4 py-3">
+    <h2 class="text-sm font-bold text-white">{t($locale, 'grid.title')}</h2>
     <div class="flex items-center gap-2">
-      <span class="rounded-full bg-[#f2bc56] px-3 py-1 text-xs font-semibold text-[#160204]">{rows.length} {t($locale, 'grid.items')}</span>
-      <button class="rounded-md border border-[#f0d2b8] px-2 py-1 text-xs font-semibold text-[#160204] hover:bg-[#fff9fa]" on:click={addRow}>{t($locale, 'grid.addRow')}</button>
+      <span class="rounded-full bg-[#3730a3] px-3 py-1 text-xs font-semibold text-white">{rows.length} {t($locale, 'grid.items')}</span>
+      <button class="rounded-md border border-[#334155] px-2 py-1 text-xs font-semibold text-white hover:bg-[#1e293b]" on:click={addRow}>{t($locale, 'grid.addRow')}</button>
     </div>
   </div>
   <div class="min-h-0 flex-1 overflow-auto">
     {#if rows.length === 0}
-      <div class="p-4 text-xs text-[#5d3438]">{t($locale, 'grid.empty')}</div>
+      <div class="p-4 text-xs text-slate-300">{t($locale, 'grid.empty')}</div>
     {:else}
       <table class="w-full border-collapse text-xs">
-        <thead class="sticky top-0 bg-[#fff9fa] text-[#160204]">
-          <tr class="border-b border-[#f0d2b8]">
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">ID</th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">Text</th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">X</th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">Y</th>
+        <thead class="sticky top-0 bg-[#0f172a] text-slate-100">
+          <tr class="border-b border-[#1e293b]">
+            <th class="px-3 py-2 text-left">Original</th>
+            <th class="px-3 py-2 text-left">Translated</th>
+            <th class="px-3 py-2 text-left">X</th>
+            <th class="px-3 py-2 text-left">Y</th>
+            <th class="px-3 py-2 text-left">Font</th>
           </tr>
         </thead>
         <tbody>
           {#each rows as row, i}
-            <tr class="border-b border-[#f0d2b8] transition-colors hover:bg-[#f5e8dd] {i % 2 === 0 ? 'bg-white' : 'bg-[#fff9fa]'}">
-              <td class="max-w-[80px] truncate px-3 py-2 font-mono text-xs text-[#5d3438]">{row.id}</td>
+            <tr class="border-b border-[#1e293b] transition-colors hover:bg-[#1e293b] {i % 2 === 0 ? 'bg-[#0b1020]' : 'bg-[#0f172a]'}">
+              <td class="max-w-[170px] truncate px-3 py-2 text-slate-300">{row.originalText}</td>
               <td class="px-3 py-2">
-                <Input
-                  className="h-8 border border-[#f0d2b8] bg-white text-xs focus:border-[#e18e90]"
-                  value={row.text}
-                  on:input={(event) => updateItem(row.id, 'text', (event.target as HTMLInputElement).value)}
-                />
+                <Input className="h-8 border border-[#334155] bg-[#0f172a] text-xs text-white" value={row.text} on:input={(e) => updateItem(row.id, 'text', (e.target as HTMLInputElement).value)} />
               </td>
-              <td class="px-3 py-2">
-                <Input
-                  className="h-8 w-16 border border-[#f0d2b8] bg-white text-xs focus:border-[#e18e90]"
-                  value={row.x}
-                  on:input={(event) => updateItem(row.id, 'x', (event.target as HTMLInputElement).value)}
-                />
-              </td>
-              <td class="px-3 py-2">
-                <Input
-                  className="h-8 w-16 border border-[#f0d2b8] bg-white text-xs focus:border-[#e18e90]"
-                  value={row.y}
-                  on:input={(event) => updateItem(row.id, 'y', (event.target as HTMLInputElement).value)}
-                />
-              </td>
+              <td class="px-3 py-2"><Input className="h-8 w-16 border border-[#334155] bg-[#0f172a] text-xs text-white" value={row.x} on:input={(e) => updateItem(row.id, 'x', (e.target as HTMLInputElement).value)} /></td>
+              <td class="px-3 py-2"><Input className="h-8 w-16 border border-[#334155] bg-[#0f172a] text-xs text-white" value={row.y} on:input={(e) => updateItem(row.id, 'y', (e.target as HTMLInputElement).value)} /></td>
+              <td class="px-3 py-2"><Input className="h-8 w-16 border border-[#334155] bg-[#0f172a] text-xs text-white" value={row.fontSize} on:input={(e) => updateItem(row.id, 'fontSize', (e.target as HTMLInputElement).value)} /></td>
             </tr>
           {/each}
         </tbody>

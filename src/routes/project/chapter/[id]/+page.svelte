@@ -56,15 +56,15 @@
       name,
       width,
       height,
-      backgroundSrc: src,
-      objects: []
+      imageUrl: src,
+      textBoxes: []
     };
 
     const firstPage = fabricStore.pages[0];
     const canReplaceFirst =
       fabricStore.pages.length === 1 &&
-      !firstPage?.backgroundSrc &&
-      (!Array.isArray(firstPage?.objects) || firstPage.objects.length === 0);
+      !firstPage?.imageUrl &&
+      (!Array.isArray(firstPage?.textBoxes) || firstPage.textBoxes.length === 0);
 
     if (canReplaceFirst) {
       fabricStore.pages[0] = { ...nextPage, name: firstPage?.name || name };
@@ -137,7 +137,45 @@
   };
 
   onMount(() => {
-    fabricStore.loadJSON({ pages: data.pages, activePageId: 0 });
+    const mappedPages = data.pages.map((page, index) => ({
+      id: page.id,
+      name: page.name || `Page ${index + 1}`,
+      width: page.width,
+      height: page.height,
+      imageUrl: page.backgroundSrc,
+      textBoxes: (page.objects || [])
+        .filter((obj: any) => obj.type === 'i-text' || obj.type === 'textbox' || obj.type === 'text')
+        .map((obj: any) => ({
+          id: String(obj.id || crypto.randomUUID()),
+          text: String(obj.text || ''),
+          originalText: String(obj.text || ''),
+          geometry: {
+            x: Number(obj.left || 60),
+            y: Number(obj.top || 60),
+            w: Math.max(20, Number(obj.width || 280)),
+            h: Math.max(20, Number(obj.height || 90)),
+            rotation: Number(obj.angle || 0)
+          },
+          style: {
+            fontSize: Number(obj.fontSize || 32),
+            fontFamily: String(obj.fontFamily || 'Inter'),
+            color: String(obj.fill || '#ffffff'),
+            bgColor: null,
+            bubbleShape: 'rounded',
+            lineHeight: Number(obj.lineHeight || 1.2)
+          }
+        }))
+    }));
+
+    fabricStore.loadProject({
+      id: data.chapterId,
+      name: data.chapterName,
+      metadata: {},
+      pages: mappedPages,
+      activePageId: 0,
+      selectedTextBoxId: null,
+      showInpainted: true
+    });
     activePageId.set(0);
     syncPageThumbs();
   });
@@ -156,7 +194,7 @@
       await fetch(`/api/project/${data.projectId}/save`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ chapterId: data.chapterId, pages: fabricStore.pages })
+        body: JSON.stringify({ chapterId: data.chapterId, pages: fabricStore.pages.map((page: any) => ({ id: page.id, name: page.name, width: page.width, height: page.height, backgroundSrc: page.imageUrl, objects: page.textBoxes.map((box: any) => ({ id: box.id, type: 'i-text', text: box.text, left: box.geometry.x, top: box.geometry.y, width: box.geometry.w, height: box.geometry.h, angle: box.geometry.rotation, fontSize: box.style.fontSize, fontFamily: box.style.fontFamily, fill: box.style.color, lineHeight: box.style.lineHeight })) })) })
       });
     }, 400);
   };
@@ -181,18 +219,7 @@
   const addText = () => {
     const page = fabricStore.pages[currentPageId];
     if (!page) return;
-    if (!Array.isArray(page.objects)) page.objects = [];
-
-    page.objects.push({
-      id: `obj_${Math.random().toString(36).slice(2, 10)}`,
-      type: 'i-text',
-      text: 'New text',
-      left: 80,
-      top: 80,
-      fontSize: 42,
-      fill: '#111827'
-    });
-
+    fabricStore.syncCanvasToGrid({ text: 'New text', originalText: 'New text', left: 80, top: 80, width: 260, height: 90, fontSize: 42, fill: '#ffffff', backgroundColor: 'rgba(15,23,42,0.65)' });
     fabricStore.notify();
   };
 

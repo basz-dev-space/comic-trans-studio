@@ -19,9 +19,11 @@ const createRepository = async (): Promise<Repository> => {
     console.info(`[repository] Connected with Prisma repository using ${envInfo?.key ?? 'unknown env key'}`);
     return createPrismaRepository(prisma);
   } catch (error) {
-    console.warn('[repository] Failed to connect Prisma. Falling back to in-memory repository.', error);
+    console.error('[repository] Failed to connect Prisma.', error);
     await prisma.$disconnect().catch(() => undefined);
-    return memoryRepository;
+    // Do not fall back to in-memory repository in production scenarios.
+    // Surface the error so the runtime (or deploy) can detect infrastructure issues.
+    throw new Error('Failed to connect to the database');
   }
 };
 

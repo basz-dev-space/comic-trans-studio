@@ -1,7 +1,18 @@
 import { randomBytes, randomUUID } from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import type { Chapter, ChapterPage, Project, Repository, User } from './types';
 
-const users: User[] = [{ id: 'u_demo', email: 'demo@comictrans.local', password: 'demo123', name: 'Demo User' }];
+// The memory repository is intended for local development and testing only.
+// Avoid shipping hardcoded credentials or unbounded session storage.
+// Demo user for local development. Password is hashed with bcrypt.
+const users: User[] = [
+  {
+    id: 'u_demo',
+    email: 'demo@comictrans.local',
+    password: bcrypt.hashSync('demo123', 10),
+    name: 'Demo User'
+  }
+];
 
 const projects: Project[] = [{ id: 'p_demo', ownerId: 'u_demo', name: 'Demo Manga', chapterIds: ['c_demo_1'] }];
 
@@ -14,7 +25,7 @@ const chapters: Chapter[] = [
   }
 ];
 
-const sessions = new Map<string, string>();
+const sessions = new Map<string, { userId: string; expiresAt?: number }>();
 const uid = (prefix: string) => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 const secureToken = () => {
   try {
@@ -26,7 +37,14 @@ const secureToken = () => {
 
 export const memoryRepository: Repository = {
   async findUserByCredentials(email: string, password: string) {
-    return users.find((user) => user.email === email && user.password === password) ?? null;
+    const user = users.find((u) => u.email === email);
+    if (!user) return null;
+    try {
+      const ok = await bcrypt.compare(password, user.password);
+      return ok ? user : null;
+    } catch {
+      return null;
+    }
   },
   async getUserById(userId: string | null) {
     if (!userId) return null;
@@ -34,7 +52,8 @@ export const memoryRepository: Repository = {
   },
   async createSession(userId: string) {
     const token = secureToken();
-    sessions.set(token, userId);
+    const ttlMs = 1000 * 60 * 60 * 24; // 24h
+    sessions.set(token, { userId, expiresAt: Date.now() + ttlMs });
     return token;
   },
   async destroySession(token: string) {
@@ -42,8 +61,13 @@ export const memoryRepository: Repository = {
   },
   async getUserBySession(token: string | undefined) {
     if (!token) return null;
-    const userId = sessions.get(token) ?? null;
-    return this.getUserById(userId);
+    const meta = sessions.get(token) ?? null;
+    if (!meta) return null;
+    if (meta.expiresAt && meta.expiresAt < Date.now()) {
+      sessions.delete(token);
+      return null;
+    }
+    return this.getUserById(meta.userId);
   },
   async getProjectsByOwner(ownerId: string) {
     return projects.filter((project) => project.ownerId === ownerId);

@@ -28,7 +28,10 @@ type DatabaseUrlInfo = {
   value: string;
 };
 
-let prismaClient: PrismaClient | null = null;
+let cachedDatabaseInfo: DatabaseUrlInfo | null | undefined;
+
+// Persist PrismaClient across HMR / module reloads to avoid connection storms
+const GLOBAL_PRISMA_KEY = '__prismaClient';
 
 const parseDotEnv = (content: string) => {
   const parsed: Record<string, string> = {};
@@ -83,14 +86,18 @@ const readEnvFilePath = (): DatabaseUrlInfo | null => {
 };
 
 const findDatabaseUrl = (): DatabaseUrlInfo | null => {
+  if (cachedDatabaseInfo !== undefined) return cachedDatabaseInfo;
+
   for (const key of DATABASE_URL_KEYS) {
     const value = process.env[key];
     if (value && value.trim().length > 0) {
-      return { key, value: value.trim() };
+      cachedDatabaseInfo = { key, value: value.trim() };
+      return cachedDatabaseInfo;
     }
   }
 
-  return readEnvFilePath() ?? readEnvFile();
+  cachedDatabaseInfo = readEnvFilePath() ?? readEnvFile();
+  return cachedDatabaseInfo ?? null;
 };
 
 export const getDatabaseUrlInfo = () => findDatabaseUrl();
@@ -98,16 +105,17 @@ export const getDatabaseUrlInfo = () => findDatabaseUrl();
 export const hasDatabaseUrl = () => Boolean(findDatabaseUrl());
 
 export const getPrismaClient = () => {
-  if (!prismaClient) {
-    const info = findDatabaseUrl();
+  const globalAny = globalThis as any;
+  if (globalAny[GLOBAL_PRISMA_KEY]) return globalAny[GLOBAL_PRISMA_KEY] as PrismaClient;
 
-    prismaClient = new PrismaClient({
-      datasources: info ? { db: { url: info.value } } : undefined,
-      log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error']
-    });
-  }
+  const info = findDatabaseUrl();
+  const client = new PrismaClient({
+    datasources: info ? { db: { url: info.value } } : undefined,
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error']
+  });
 
-  return prismaClient;
+  globalAny[GLOBAL_PRISMA_KEY] = client;
+  return client;
 };
 
 export const checkPrismaConnection = async () => {
@@ -134,11 +142,11 @@ export const checkPrismaConnection = async () => {
       envKey: info.key
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    console.error('[db] Prisma connection health check failed', error);
     return {
       ok: false,
       mode: 'connect_error' as const,
-      message,
+      message: 'Unable to connect to the database',
       envKey: info.key
     };
   }

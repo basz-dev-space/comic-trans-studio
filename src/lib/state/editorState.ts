@@ -23,6 +23,10 @@ export type GridPatch = Partial<Omit<TextBox, 'id'>>;
 class EditorState {
   project: ProjectData = defaultProject();
   private listeners = new Set<() => void>();
+  // simple undo/redo stacks storing serialized project snapshots
+  private past: string[] = [];
+  private future: string[] = [];
+  private lastSnapshot: string | null = null;
 
   get pages() {
     return this.project.pages;
@@ -43,7 +47,66 @@ class EditorState {
 
   notify() {
     this.project.metadata.updatedAt = new Date().toISOString();
+    this.pushSnapshotIfNeeded();
     for (const listener of this.listeners) listener();
+  }
+
+  private serializeProject() {
+    try {
+      return JSON.stringify(this.project);
+    } catch {
+      return '';
+    }
+  }
+
+  private pushSnapshotIfNeeded() {
+    const snap = this.serializeProject();
+    if (!snap) return;
+    if (this.lastSnapshot === snap) return;
+    this.past.push(this.lastSnapshot ?? snap);
+    // cap history
+    if (this.past.length > 100) this.past.shift();
+    this.lastSnapshot = snap;
+    // clear redo stack when new change occurs
+    this.future = [];
+  }
+
+  undo() {
+    if (!this.canUndo()) return false;
+    const current = this.serializeProject();
+    if (current) this.future.push(current);
+    const previous = this.past.pop() as string;
+    try {
+      this.project = ProjectSchema.parse(JSON.parse(previous));
+      this.lastSnapshot = previous;
+      this.notify();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  redo() {
+    if (!this.canRedo()) return false;
+    const current = this.serializeProject();
+    if (current) this.past.push(current);
+    const next = this.future.pop() as string;
+    try {
+      this.project = ProjectSchema.parse(JSON.parse(next));
+      this.lastSnapshot = next;
+      this.notify();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  canUndo() {
+    return this.past.length > 0;
+  }
+
+  canRedo() {
+    return this.future.length > 0;
   }
 
   addPage(imageUrl?: string) {

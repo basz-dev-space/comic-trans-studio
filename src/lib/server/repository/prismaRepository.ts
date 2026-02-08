@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import type { Chapter, Project, Repository, User } from './types';
 
 const mapUser = (row: any): User => ({
@@ -45,8 +46,10 @@ const mapChapter = (row: any): Chapter => ({
 
 export const createPrismaRepository = (prisma: any): Repository => ({
   async findUserByCredentials(email, password) {
-    const user = await prisma.user.findFirst({ where: { email, passwordHash: password } });
-    return user ? mapUser(user) : null;
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return null;
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    return ok ? mapUser(user) : null;
   },
   async getUserById(userId) {
     if (!userId) return null;
@@ -131,17 +134,28 @@ export const createPrismaRepository = (prisma: any): Repository => ({
     const chapter = await prisma.chapter.findUnique({ where: { id: chapterId } });
     if (!chapter) return null;
 
+    // To avoid unique constraint collisions when updating orderIndex, first move
+    // all existing pages to a high temporary offset, then write final indexes.
+    const OFFSET = 100000;
+
     await prisma.$transaction(async (tx: any) => {
       const existingPages = await tx.page.findMany({ where: { chapterId } });
       const existingPageIds = new Set(existingPages.map((page: any) => page.id));
       const incomingPageIds = new Set(pages.map((page) => page.id));
 
+      // Move existing pages to a high offset to avoid per-statement unique collisions
+      for (const existing of existingPages) {
+        await tx.page.update({ where: { id: existing.id }, data: { orderIndex: existing.orderIndex + OFFSET } });
+      }
+
+      // Delete pages that are no longer present
       for (const existing of existingPages) {
         if (!incomingPageIds.has(existing.id)) {
           await tx.page.delete({ where: { id: existing.id } });
         }
       }
 
+      // Create or update incoming pages with final indexes
       for (const [index, page] of pages.entries()) {
         if (existingPageIds.has(page.id)) {
           await tx.page.update({

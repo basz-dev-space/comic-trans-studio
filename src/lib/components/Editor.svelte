@@ -148,7 +148,11 @@
   const zoomIn = () => (zoomPercent = Math.min(220, zoomPercent + 10));
   const zoomOut = () => (zoomPercent = Math.max(50, zoomPercent - 10));
   const zoomToFit = () => (zoomPercent = 100);
-  const announceHistoryPlaceholder = (type: 'undo' | 'redo') => notifications.push({ type: 'info', title: type === 'undo' ? 'Undo is coming next' : 'Redo is coming next', timeoutMs: 1400 });
+  const announceHistoryPlaceholder = (type: 'undo' | 'redo') => undefined;
+  const canUndo = () => store?.canUndo?.() ?? false;
+  const canRedo = () => store?.canRedo?.() ?? false;
+  const performUndo = () => store?.undo?.();
+  const performRedo = () => store?.redo?.();
 
   const installKeyboardShortcuts = () => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -186,7 +190,13 @@
 
     const page = currentPage();
     if (page) {
-      manager.init(canvasEl, page);
+      (async () => {
+        try {
+          await manager.init(canvasEl, page);
+        } catch (err) {
+          notifications.push({ type: 'error', title: 'Canvas initialization failed', description: (err as Error)?.message });
+        }
+      })();
     }
 
     stopChangeWatcher = store.onChange(() => {
@@ -197,7 +207,7 @@
     removeKeyboardHandler = installKeyboardShortcuts();
     const onResize = () => computeFitScale();
     window.addEventListener('resize', onResize);
-    wrapperResizeObserver = new ResizeObserver(() => computeFitScale());
+    wrapperResizeObserver = new ResizeObserver(() => requestAnimationFrame(computeFitScale));
     wrapperResizeObserver.observe(wrapperEl);
     return () => {
       window.removeEventListener('resize', onResize);
@@ -224,8 +234,8 @@
 
 <div class="relative flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-[#e9edf1]">
   <div class="mx-auto mt-3 inline-flex flex-wrap items-center gap-1 rounded bg-[#161c29] px-2 py-1 text-[#d4d9e4] shadow">
-    <button class="rounded px-2 py-1 hover:bg-[#242b3a]" on:click={() => announceHistoryPlaceholder('undo')}><Undo2 class="h-3.5 w-3.5" /></button>
-    <button class="rounded px-2 py-1 hover:bg-[#242b3a]" on:click={() => announceHistoryPlaceholder('redo')}><Redo2 class="h-3.5 w-3.5" /></button>
+    <button class="rounded px-2 py-1 hover:bg-[#242b3a] disabled:opacity-40" on:click={performUndo} disabled={!canUndo()}><Undo2 class="h-3.5 w-3.5" /></button>
+    <button class="rounded px-2 py-1 hover:bg-[#242b3a] disabled:opacity-40" on:click={performRedo} disabled={!canRedo()}><Redo2 class="h-3.5 w-3.5" /></button>
     <div class="mx-1 h-5 w-px bg-[#3a4252]"></div>
     <button class="rounded px-2 py-1 hover:bg-[#242b3a]" on:click={addTextLayer}><SquarePen class="h-3.5 w-3.5" /></button>
     <button class="rounded px-2 py-1 hover:bg-[#242b3a]" on:click={addShapeLayer}><Sparkles class="h-3.5 w-3.5" /></button>

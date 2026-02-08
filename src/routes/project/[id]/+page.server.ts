@@ -35,7 +35,13 @@ export const actions: Actions = {
       throw error(403, 'Forbidden');
     }
 
-    if (name) await repo.renameChapter(chapterId, name);
+    if (name) {
+      const updated = await repo.renameChapter(chapterId, name);
+      if (!updated) {
+        return { success: false, error: 'Could not rename chapter' };
+      }
+    }
+
     return { success: true };
   },
   deleteChapter: async ({ request, params }) => {

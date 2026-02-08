@@ -16,11 +16,13 @@
   let manager: CanvasManager;
   let stopChangeWatcher: undefined | (() => void);
   let removeKeyboardHandler: undefined | (() => void);
+  let wrapperResizeObserver: ResizeObserver | undefined;
   let isApplyingState = false;
   let isTranslating = false;
   let isCleaning = false;
   let isUploading = false;
   let zoomPercent = 100;
+  let lastPageForZoom = pageId;
 
   const currentPage = () => store.pages?.[pageId];
   $: current = currentPage();
@@ -28,6 +30,9 @@
   $: hasTextLayers = Boolean(current?.textBoxes?.length);
   $: showCanvasEmptyState = !hasBackground && !hasTextLayers;
   let fitScale = 1;
+  $: canvasScale = fitScale * (zoomPercent / 100);
+  $: viewportWidth = Math.max(0, Math.round((current?.width || 0) * canvasScale));
+  $: viewportHeight = Math.max(0, Math.round((current?.height || 0) * canvasScale));
 
   const syncFromCanvas = () => {
     if (isApplyingState) return;
@@ -51,11 +56,11 @@
   const computeFitScale = () => {
     const page = currentPage();
     if (!page || !wrapperEl) return (fitScale = 1);
-    const paddingW = 48; // account for wrapper padding
-    const paddingH = 48;
+    const paddingW = 88; // wrapper + frame paddings
+    const paddingH = 88;
     const availW = Math.max(32, wrapperEl.clientWidth - paddingW);
     const availH = Math.max(32, wrapperEl.clientHeight - paddingH);
-    fitScale = Math.min(1, Math.min(availW / page.width, availH / page.height));
+    fitScale = Math.max(0.05, Math.min(availW / page.width, availH / page.height));
   };
 
   const addTextLayer = () => {
@@ -142,7 +147,7 @@
 
   const zoomIn = () => (zoomPercent = Math.min(220, zoomPercent + 10));
   const zoomOut = () => (zoomPercent = Math.max(50, zoomPercent - 10));
-  const zoomReset = () => (zoomPercent = 100);
+  const zoomToFit = () => (zoomPercent = 100);
   const announceHistoryPlaceholder = (type: 'undo' | 'redo') => notifications.push({ type: 'info', title: type === 'undo' ? 'Undo is coming next' : 'Redo is coming next', timeoutMs: 1400 });
 
   const installKeyboardShortcuts = () => {
@@ -156,6 +161,10 @@
         event.preventDefault();
         addShapeLayer();
       }
+      if ((event.metaKey || event.ctrlKey) && event.key === '0') {
+        event.preventDefault();
+        zoomToFit();
+      }
       if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault();
         deleteSelection();
@@ -166,7 +175,7 @@
     return () => window.removeEventListener('keydown', onKeyDown);
   };
 
-  onMount(async () => {
+  onMount(() => {
     manager = new CanvasManager({
       onObjectsChanged: syncFromCanvas,
       onSelectionChanged: (id) => {
@@ -176,7 +185,9 @@
     });
 
     const page = currentPage();
-    if (page) await manager.init(canvasEl, page);
+    if (page) {
+      manager.init(canvasEl, page);
+    }
 
     stopChangeWatcher = store.onChange(() => {
       if (store.activePageId !== pageId) return;
@@ -186,10 +197,19 @@
     removeKeyboardHandler = installKeyboardShortcuts();
     const onResize = () => computeFitScale();
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    wrapperResizeObserver = new ResizeObserver(() => computeFitScale());
+    wrapperResizeObserver.observe(wrapperEl);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      wrapperResizeObserver?.disconnect();
+    };
   });
 
   $: if (store && typeof pageId === 'number') {
+    if (pageId !== lastPageForZoom) {
+      zoomToFit();
+      lastPageForZoom = pageId;
+    }
     store.activePageId = pageId;
     renderPage();
   }
@@ -197,6 +217,7 @@
   onDestroy(() => {
     stopChangeWatcher?.();
     removeKeyboardHandler?.();
+    wrapperResizeObserver?.disconnect();
     manager?.dispose();
   });
 </script>
@@ -215,10 +236,12 @@
     <input bind:this={fileInputEl} type="file" class="hidden" accept="image/*" on:change={uploadOverlayImage} />
   </div>
 
-    <div bind:this={wrapperEl} class="relative flex min-h-0 flex-1 items-center justify-center overflow-auto p-5" style="max-height: calc(100vh - 200px);">
+    <div bind:this={wrapperEl} class="relative flex min-h-0 flex-1 items-center justify-center overflow-auto p-5">
       <div class="rounded bg-[#cfd4db] p-6 flex-shrink-0">
-        <div style={`transform: scale(${fitScale * (zoomPercent / 100)}); transform-origin: top center;`} class="transition-transform duration-150">
-          <canvas bind:this={canvasEl}></canvas>
+        <div class="transition-[width,height] duration-150" style={`width:${viewportWidth}px; height:${viewportHeight}px;`}>
+          <div style={`transform: scale(${canvasScale}); transform-origin: top left;`} class="transition-transform duration-150">
+            <canvas bind:this={canvasEl}></canvas>
+          </div>
         </div>
       </div>
 
@@ -239,7 +262,7 @@
   <div class="flex items-center justify-end gap-2 bg-[#e3e7ec] px-3 py-2 text-xs text-[#464d58]">
     <span>{t($locale, 'editor.title')}</span>
     <button class="rounded bg-white px-1.5 py-1" on:click={zoomOut}><Minus class="h-3 w-3" /></button>
-    <button class="rounded bg-white px-1.5 py-1" on:click={zoomReset}><RotateCcw class="h-3 w-3" /></button>
+    <button class="rounded bg-white px-1.5 py-1" on:click={zoomToFit} title="Fit page"><RotateCcw class="h-3 w-3" /></button>
     <button class="rounded bg-white px-1.5 py-1" on:click={zoomIn}><Plus class="h-3 w-3" /></button>
     <span class="w-10 text-right font-semibold">{zoomPercent}%</span>
     <ZoomIn class="h-3.5 w-3.5" />

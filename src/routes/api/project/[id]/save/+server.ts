@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { z } from 'zod';
-import { db } from '$lib/server/data';
+import { getRepository } from '$lib/server/repository';
 
 const SavePayloadSchema = z.object({
   chapterId: z.string().min(1),
@@ -39,13 +39,14 @@ export const POST: RequestHandler = async ({ params, request }) => {
   }
 
   const { chapterId, pages } = payload.data;
+  const repo = await getRepository();
 
-  const project = db.getProjectById(params.id);
-  const chapter = db.getChapterById(chapterId);
+  const project = await repo.getProjectById(params.id);
+  const chapter = await repo.getChapterById(chapterId);
   if (!project || !chapter || chapter.projectId !== project.id) {
     throw error(403, 'Forbidden');
   }
 
-  db.saveChapterPages(chapter.id, pages);
+  await repo.saveChapterPages(chapter.id, pages);
   return json({ ok: true });
 };

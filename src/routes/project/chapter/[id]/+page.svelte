@@ -3,11 +3,27 @@
   import DataGrid from '$lib/components/DataGrid.svelte';
   import Editor from '$lib/components/Editor.svelte';
   import { Button } from '$lib/components/ui/button';
-  import { Image, FileText, Box } from 'lucide-svelte';
+  import {
+    Image as ImageIcon,
+    FileText,
+    Box,
+    PanelLeftClose,
+    PanelLeftOpen,
+    PanelBottomClose,
+    PanelBottomOpen,
+    PanelTopClose,
+    PanelTopOpen,
+    House,
+    Type,
+    Component,
+    Table
+  } from 'lucide-svelte';
   import { activePageId, debouncedStoreChange, fabricStore } from '$lib/services/fabric';
   import { exportProjectPdf, exportProjectZip } from '$lib/utils/export';
   import JSZip from 'jszip';
   import { locale, t } from '$lib/i18n';
+  import { notifications } from '$lib/services/notifications';
+  import { withRetry, normalizeError } from '$lib/utils/async';
 
   export let data: {
     chapterId: string;
@@ -17,19 +33,23 @@
   };
 
   type PageThumb = { id: string; index: number; name: string };
-
   let currentPageId = fabricStore.activePageId;
   let pageThumbs: PageThumb[] = [];
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
+  let isSaving = false;
+  let isDirty = false;
+  let lastSavedAt: Date | null = null;
+  let saveError = '';
+  let saveAttempt = 0;
 
-  let leftPanelWidth = 240;
-  let rightPanelWidth = 380;
-  const minLeft = 180;
-  const maxLeft = 420;
-  const minRight = 300;
-  const maxRight = 520;
+  let leftPanelWidth = 210;
+  const minLeft = 160;
+  const maxLeft = 300;
 
-  let activeRightTab: 'properties' | 'datagrid' = 'datagrid';
+  let activeBottomTab: 'properties' | 'datagrid' = 'datagrid';
+  let showPagesPanel = true;
+  let showCanvasPanel = true;
+  let showBottomPanel = true;
 
   let detachResizeListeners: undefined | (() => void);
   let importInputEl: HTMLInputElement;
@@ -123,13 +143,9 @@
     if (!files.length) return;
 
     for (const file of files) {
-      if (file.type.startsWith('image/')) {
-        await importImageFiles([file]);
-      } else if (/\.zip$/i.test(file.name)) {
-        await importZipAsPages(file);
-      } else if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
-        await importPdfAsPages(file);
-      }
+      if (file.type.startsWith('image/')) await importImageFiles([file]);
+      else if (/\.zip$/i.test(file.name)) await importZipAsPages(file);
+      else if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) await importPdfAsPages(file);
     }
 
     activePageId.set(Math.max(0, fabricStore.pages.length - 1));
@@ -191,13 +207,58 @@
 
   const saveChapter = () => {
     if (saveTimer) clearTimeout(saveTimer);
+    isDirty = true;
     saveTimer = setTimeout(async () => {
-      await fetch(`/api/project/${data.projectId}/save`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ chapterId: data.chapterId, pages: fabricStore.pages.map((page: any) => ({ id: page.id, name: page.name, width: page.width, height: page.height, backgroundSrc: page.imageUrl, objects: page.textBoxes.map((box: any) => ({ id: box.id, type: 'i-text', text: box.text, left: box.geometry.x, top: box.geometry.y, width: box.geometry.w, height: box.geometry.h, angle: box.geometry.rotation, fontSize: box.style.fontSize, fontFamily: box.style.fontFamily, fill: box.style.color, lineHeight: box.style.lineHeight })) })) })
-      });
-    }, 400);
+      isSaving = true;
+      saveError = '';
+
+      try {
+        await withRetry(async () => {
+          const response = await fetch(`/api/project/${data.projectId}/save`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              chapterId: data.chapterId,
+              pages: fabricStore.pages.map((page: any) => ({
+                id: page.id,
+                name: page.name,
+                width: page.width,
+                height: page.height,
+                backgroundSrc: page.imageUrl,
+                objects: page.textBoxes.map((box: any) => ({
+                  id: box.id,
+                  type: 'i-text',
+                  text: box.text,
+                  left: box.geometry.x,
+                  top: box.geometry.y,
+                  width: box.geometry.w,
+                  height: box.geometry.h,
+                  angle: box.geometry.rotation,
+                  fontSize: box.style.fontSize,
+                  fontFamily: box.style.fontFamily,
+                  fill: box.style.color,
+                  lineHeight: box.style.lineHeight
+                }))
+              }))
+            })
+          });
+          if (!response.ok) throw new Error(`Save failed (${response.status})`);
+        }, { retries: 2, delayMs: 350 });
+
+        saveAttempt += 1;
+        lastSavedAt = new Date();
+        isDirty = false;
+        if (saveAttempt === 1 || saveAttempt % 5 === 0) {
+          notifications.push({ type: 'success', title: t($locale, 'chapter.saveSuccess'), timeoutMs: 1800 });
+        }
+      } catch (error) {
+        const normalized = normalizeError(error, t($locale, 'chapter.saveFailed'));
+        saveError = normalized.message;
+        notifications.push({ type: 'error', title: t($locale, 'chapter.saveFailed'), description: normalized.message, timeoutMs: 3600 });
+      } finally {
+        isSaving = false;
+      }
+    }, 450);
   };
 
   const pageStateUnsubscribe = activePageId.subscribe((value) => {
@@ -229,28 +290,28 @@
     addText();
   };
 
-  const dragResize = (side: 'left' | 'right', event: MouseEvent) => {
+  const togglePanel = (panel: 'pages' | 'canvas' | 'bottom') => {
+    if (panel === 'pages') showPagesPanel = !showPagesPanel;
+    if (panel === 'canvas') showCanvasPanel = !showCanvasPanel;
+    if (panel === 'bottom') showBottomPanel = !showBottomPanel;
+
+    if (!showPagesPanel && !showCanvasPanel) {
+      showCanvasPanel = true;
+      notifications.push({ type: 'info', title: 'Canvas kept open', description: 'At least one top panel stays visible.', timeoutMs: 1800 });
+    }
+  };
+
+  const dragResize = (event: MouseEvent) => {
     event.preventDefault();
     detachResizeListeners?.();
-
     const startX = event.clientX;
     const initialLeft = leftPanelWidth;
-    const initialRight = rightPanelWidth;
 
     const onMove = (moveEvent: MouseEvent) => {
-      const delta = moveEvent.clientX - startX;
-
-      if (side === 'left') {
-        leftPanelWidth = Math.min(maxLeft, Math.max(minLeft, initialLeft + delta));
-        return;
-      }
-
-      rightPanelWidth = Math.min(maxRight, Math.max(minRight, initialRight - delta));
+      leftPanelWidth = Math.min(maxLeft, Math.max(minLeft, initialLeft + (moveEvent.clientX - startX)));
     };
 
-    const onUp = () => {
-      detachResizeListeners?.();
-    };
+    const onUp = () => detachResizeListeners?.();
 
     detachResizeListeners = () => {
       window.removeEventListener('mousemove', onMove);
@@ -270,87 +331,92 @@
   });
 </script>
 
-<div class="grid h-full min-h-[80vh] grid-rows-[auto_1fr] gap-5 pb-3">
-  <div class="rounded-2xl border border-[#f1d2b8] bg-white p-4 shadow-elevation-1 sm:p-5">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p class="badge-label">{t($locale, 'chapter.badge')}</p>
-        <h1 class="text-heading-lg mt-2 text-[#160204]">{data.chapterName}</h1>
-      </div>
-      <a class="inline-flex h-10 items-center justify-center gap-1 rounded-full border-2 border-[#e18e90] bg-white px-5 text-sm font-semibold text-[#e18e90] transition-all hover:bg-[#f5e8dd]" href={`/project/${data.projectId}`}>← {t($locale, 'chapter.back')}</a>
-    </div>
-
-    <div class="mt-4 flex flex-wrap gap-2 border-t border-[#f0d2b8] pt-4">
-      <Button on:click={createPage} className="h-10 rounded-lg bg-[#e18e90] px-4 text-sm font-semibold text-white hover:bg-[#d97b7d]">{t($locale, 'chapter.newPage')}</Button>
-      <Button variant="outline" on:click={addText} className="h-10 rounded-lg px-4 text-sm font-semibold">{t($locale, 'chapter.addText')}</Button>
-      <Button variant="outline" on:click={quickAdd} className="h-10 rounded-lg bg-[#f5c088] px-4 text-sm font-semibold text-[#160204] hover:bg-[#e6a844]">{t($locale, 'chapter.quick')}</Button>
-      <Button variant="outline" on:click={() => importInputEl?.click()} className="h-10 rounded-lg px-4 text-sm font-semibold"><Image class="mr-2 h-4 w-4" /> {t($locale, 'chapter.importPages')}</Button>
-      <input bind:this={importInputEl} type="file" class="hidden" accept="image/*,.zip,.pdf,application/pdf" multiple on:change={handleImportFiles} />
-      <div class="ml-auto flex gap-2">
-        <Button variant="outline" on:click={() => exportProjectZip(fabricStore)} className="h-10 rounded-lg px-4 text-sm font-semibold"><Box class="mr-2 h-4 w-4" /> {t($locale, 'chapter.exportZip')}</Button>
-        <Button variant="outline" on:click={() => exportProjectPdf(fabricStore)} className="h-10 rounded-lg px-4 text-sm font-semibold"><FileText class="mr-2 h-4 w-4" /> {t($locale, 'chapter.exportPdf')}</Button>
+<div class="rounded-xl bg-[#f3f5f8]">
+  <div class="px-4 py-2">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-sm font-semibold text-[#2e3137]">{data.chapterName}</span>
+      <div class="ml-auto flex items-center gap-2 text-xs">
+        <span class="rounded bg-white px-2 py-1 text-[#4a4e57]">{isSaving ? t($locale, 'chapter.saveSaving') : saveError ? t($locale, 'chapter.saveError') : isDirty ? t($locale, 'chapter.savePending') : t($locale, 'chapter.saveSaved')}</span>
+        {#if lastSavedAt}<span class="text-[#6b7280]">{lastSavedAt.toLocaleTimeString()}</span>{/if}
+        <a class="rounded bg-white px-3 py-1 font-semibold text-[#444]" href={`/project/${data.projectId}`}>Back</a>
       </div>
     </div>
   </div>
 
-  <main class="flex min-h-0 min-w-0 gap-2 overflow-hidden">
-    <section class="min-h-0 min-w-0 overflow-hidden rounded-2xl border border-[#f1d2b8] bg-white shadow-elevation-1" style={`width:${leftPanelWidth}px`}>
-      <div class="sticky top-0 border-b border-[#f0d2b8] bg-white px-4 py-3">
-        <h2 class="text-sm font-semibold text-[#160204]">{t($locale, 'chapter.pages')}</h2>
-        <p class="mt-1 text-xs text-[#5d3438]">{pageThumbs.length} {t($locale, 'chapter.pageCount')}</p>
+  <div class="bg-[#eef1f5] px-3 py-2">
+    <div class="flex flex-wrap items-center gap-2">
+      <button class="inline-flex items-center gap-1 rounded bg-white px-3 py-1.5 text-sm font-semibold text-[#2f343b]"><House class="h-4 w-4" /> Menu</button>
+      <button class="inline-flex items-center gap-1 rounded bg-white px-3 py-1.5 text-sm font-semibold text-[#2f343b]"><Type class="h-4 w-4" /> Text</button>
+      <button class="inline-flex items-center gap-1 rounded bg-white px-3 py-1.5 text-sm font-semibold text-[#2f343b]"><Component class="h-4 w-4" /> Component</button>
+      <button class="inline-flex items-center gap-1 rounded bg-white px-3 py-1.5 text-sm font-semibold text-[#2f343b]"><Table class="h-4 w-4" /> DataGrid</button>
+
+      <div class="ml-auto flex gap-2">
+        <Button on:click={createPage} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]">New page</Button>
+        <Button variant="outline" on:click={addText} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]">Add text</Button>
+        <Button variant="outline" on:click={quickAdd} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]">Quick add</Button>
+        <Button variant="outline" on:click={() => importInputEl?.click()} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]"><ImageIcon class="mr-1 h-3.5 w-3.5" /> Import</Button>
+        <Button variant="outline" on:click={() => exportProjectZip(fabricStore)} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]"><Box class="mr-1 h-3.5 w-3.5" /> ZIP</Button>
+        <Button variant="outline" on:click={() => exportProjectPdf(fabricStore)} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]"><FileText class="mr-1 h-3.5 w-3.5" /> PDF</Button>
       </div>
-      <div class="h-[calc(100%-65px)] overflow-auto px-3 py-3">
-        <div class="space-y-2">
+      <input bind:this={importInputEl} type="file" class="hidden" accept="image/*,.zip,.pdf,application/pdf" multiple on:change={handleImportFiles} />
+    </div>
+  </div>
+
+  <div class="bg-white px-3 py-2">
+    <div class="flex flex-wrap gap-2">
+      <button class="inline-flex items-center gap-1 rounded bg-[#f8f9fb] px-2.5 py-1 text-xs" on:click={() => togglePanel('pages')}>{#if showPagesPanel}<PanelLeftClose class="h-3 w-3" />Hide pages{:else}<PanelLeftOpen class="h-3 w-3" />Show pages{/if}</button>
+      <button class="inline-flex items-center gap-1 rounded bg-[#f8f9fb] px-2.5 py-1 text-xs" on:click={() => togglePanel('canvas')}>{#if showCanvasPanel}<PanelTopClose class="h-3 w-3" />Hide canvas{:else}<PanelTopOpen class="h-3 w-3" />Show canvas{/if}</button>
+      <button class="inline-flex items-center gap-1 rounded bg-[#f8f9fb] px-2.5 py-1 text-xs" on:click={() => togglePanel('bottom')}>{#if showBottomPanel}<PanelBottomClose class="h-3 w-3" />Hide datagrid{:else}<PanelBottomOpen class="h-3 w-3" />Show datagrid{/if}</button>
+    </div>
+  </div>
+
+  <div class="grid min-h-[56vh] grid-cols-1 md:grid-cols-[auto_1fr]">
+    {#if showPagesPanel}
+      <aside class="bg-[#eef1f5]" style={`width:${leftPanelWidth}px`}>
+        <div class="border-b border-[#d9dde3] p-3 text-sm font-semibold text-[#2f343b]">Pages</div>
+        <div class="space-y-1 p-2">
           {#each pageThumbs as page}
             <button
-              class={`w-full rounded-lg border-2 px-3 py-2 text-left text-sm font-medium transition-all ${
-                currentPageId === page.index
-                  ? 'border-[#e18e90] bg-[#f5c088] text-[#160204] shadow-elevation-1'
-                  : 'border-[#f0d2b8] bg-[#fff9fa] text-[#5d3438] hover:border-[#e18e90] hover:bg-white'
-              }`}
+              class={`flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm ${currentPageId === page.index ? 'bg-white font-semibold text-[#21242a]' : 'text-[#555b66] hover:bg-[#f8f9fb]'}`}
               on:click={() => activePageId.set(page.index)}
             >
-              <span class="mr-2 inline-block h-5 w-5 rounded bg-[#e18e90] text-center text-xs font-bold leading-5 text-white">{page.index + 1}</span>
+              <span class="h-5 w-5 rounded bg-white text-center text-xs leading-5">{page.index + 1}</span>
               {page.name}
             </button>
           {/each}
         </div>
+      </aside>
+    {/if}
+
+    {#if showPagesPanel && showCanvasPanel}
+      <button class="hidden w-2 cursor-col-resize items-center justify-center bg-[#eef1f5] md:flex" on:mousedown={dragResize} aria-label="Resize pages panel">
+        <div class="h-8 w-0.5 bg-[#c9ced7]"></div>
+      </button>
+    {/if}
+
+    {#if showCanvasPanel}
+      <section class="bg-[#ebedf1] p-4">
+        <Editor store={fabricStore} pageId={currentPageId} />
+      </section>
+    {/if}
+  </div>
+
+  {#if showBottomPanel}
+    <section class="bg-[#f1f3f7]">
+      <div class="flex bg-[#e9edf2] px-3 py-2 text-sm">
+        <button class={`rounded px-3 py-1 font-semibold ${activeBottomTab === 'properties' ? 'bg-white text-[#1f242b]' : 'text-[#636a75]'}`} on:click={() => (activeBottomTab = 'properties')}>Properties</button>
+        <button class={`rounded px-3 py-1 font-semibold ${activeBottomTab === 'datagrid' ? 'bg-white text-[#1f242b]' : 'text-[#636a75]'}`} on:click={() => (activeBottomTab = 'datagrid')}>DataGrid</button>
       </div>
-    </section>
-
-    <button class="flex w-2 cursor-col-resize items-center justify-center" aria-label="Resize left panel" on:mousedown={(event) => dragResize('left', event)}>
-      <div class="h-16 w-1 rounded-full bg-[#e9d4b8]"></div>
-    </button>
-
-    <section class="min-h-0 flex-1 overflow-hidden rounded-2xl border border-[#f1d2b8] bg-white shadow-elevation-1">
-      <Editor store={fabricStore} pageId={currentPageId} />
-    </section>
-
-    <button class="flex w-2 cursor-col-resize items-center justify-center" aria-label="Resize right panel" on:mousedown={(event) => dragResize('right', event)}>
-      <div class="h-16 w-1 rounded-full bg-[#e9d4b8]"></div>
-    </button>
-
-    <aside class="min-h-0 min-w-0 overflow-hidden rounded-2xl border border-[#f1d2b8] bg-white shadow-elevation-1" style={`width:${rightPanelWidth}px`}>
-      <div class="flex border-b border-[#f0d2b8] p-2">
-        <button class={`flex-1 rounded-md px-3 py-2 text-sm font-semibold ${activeRightTab === 'properties' ? 'bg-[#f5e8dd] text-[#160204]' : 'text-[#5d3438]'}`} on:click={() => (activeRightTab = 'properties')}>{t($locale, 'chapter.properties')}</button>
-        <button class={`flex-1 rounded-md px-3 py-2 text-sm font-semibold ${activeRightTab === 'datagrid' ? 'bg-[#f5e8dd] text-[#160204]' : 'text-[#5d3438]'}`} on:click={() => (activeRightTab = 'datagrid')}>{t($locale, 'chapter.datagrid')}</button>
-      </div>
-
-      {#if activeRightTab === 'properties'}
-        <div class="space-y-3 p-4 text-sm text-[#5d3438]">
-          <p class="font-semibold text-[#160204]">{t($locale, 'chapter.propertiesHintTitle')}</p>
+      {#if activeBottomTab === 'properties'}
+        <div class="p-4 text-sm text-[#4f5560]">
+          <p class="mb-2 font-semibold text-[#242a31]">{t($locale, 'chapter.propertiesHintTitle')}</p>
           <p>{t($locale, 'chapter.propertiesHint')}</p>
-          <ul class="list-disc space-y-1 pl-5 text-xs">
-            <li>{t($locale, 'chapter.propertiesHintA')}</li>
-            <li>{t($locale, 'chapter.propertiesHintB')}</li>
-            <li>{t($locale, 'chapter.propertiesHintC')}</li>
-          </ul>
         </div>
       {:else}
-        <div class="h-[calc(100%-58px)]">
+        <div class="h-[340px]">
           <DataGrid store={fabricStore} pageId={currentPageId} />
         </div>
       {/if}
-    </aside>
-  </main>
+    </section>
+  {/if}
 </div>

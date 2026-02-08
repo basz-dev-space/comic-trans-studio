@@ -3,6 +3,7 @@
   import DataGrid from '$lib/components/DataGrid.svelte';
   import Editor from '$lib/components/Editor.svelte';
   import { Button } from '$lib/components/ui/button';
+  import { Image, FileText, Box } from 'lucide-svelte';
   import { activePageId, debouncedStoreChange, fabricStore } from '$lib/services/fabric';
   import { exportProjectPdf, exportProjectZip } from '$lib/utils/export';
   import JSZip from 'jszip';
@@ -283,11 +284,11 @@
       <Button on:click={createPage} className="h-10 rounded-lg bg-[#e18e90] px-4 text-sm font-semibold text-white hover:bg-[#d97b7d]">{t($locale, 'chapter.newPage')}</Button>
       <Button variant="outline" on:click={addText} className="h-10 rounded-lg px-4 text-sm font-semibold">{t($locale, 'chapter.addText')}</Button>
       <Button variant="outline" on:click={quickAdd} className="h-10 rounded-lg bg-[#f5c088] px-4 text-sm font-semibold text-[#160204] hover:bg-[#e6a844]">{t($locale, 'chapter.quick')}</Button>
-      <Button variant="outline" on:click={() => importInputEl?.click()} className="h-10 rounded-lg px-4 text-sm font-semibold">🖼️ {t($locale, 'chapter.importPages')}</Button>
+      <Button variant="outline" on:click={() => importInputEl?.click()} className="h-10 rounded-lg px-4 text-sm font-semibold"><Image class="mr-2 h-4 w-4" /> {t($locale, 'chapter.importPages')}</Button>
       <input bind:this={importInputEl} type="file" class="hidden" accept="image/*,.zip,.pdf,application/pdf" multiple on:change={handleImportFiles} />
       <div class="ml-auto flex gap-2">
-        <Button variant="outline" on:click={() => exportProjectZip(fabricStore)} className="h-10 rounded-lg px-4 text-sm font-semibold">📦 {t($locale, 'chapter.exportZip')}</Button>
-        <Button variant="outline" on:click={() => exportProjectPdf(fabricStore)} className="h-10 rounded-lg px-4 text-sm font-semibold">📄 {t($locale, 'chapter.exportPdf')}</Button>
+        <Button variant="outline" on:click={() => exportProjectZip(fabricStore)} className="h-10 rounded-lg px-4 text-sm font-semibold"><Box class="mr-2 h-4 w-4" /> {t($locale, 'chapter.exportZip')}</Button>
+        <Button variant="outline" on:click={() => exportProjectPdf(fabricStore)} className="h-10 rounded-lg px-4 text-sm font-semibold"><FileText class="mr-2 h-4 w-4" /> {t($locale, 'chapter.exportPdf')}</Button>
       </div>
     </div>
   </div>

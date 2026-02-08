@@ -10,11 +10,34 @@ export type OcrBlock = {
 
 export async function runOCR(image: Blob | string): Promise<OcrBlock[]> {
   if (!image) return [];
+  try {
+    // If image is a blob, send as FormData; if string (data URL), send JSON
+    let res: Response;
+    if (typeof image === 'string') {
+      res = await fetch('/api/ocr', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ imageUrl: image })
+      });
+    } else {
+      const fd = new FormData();
+      fd.append('file', image as Blob, 'image.png');
+      res = await fetch('/api/ocr', { method: 'POST', body: fd });
+    }
 
-  return [
-    { text: 'Sample OCR text', x: 0.08, y: 0.1, width: 0.4, height: 0.12 },
-    { text: 'Second line', x: 0.12, y: 0.32, width: 0.35, height: 0.1 }
-  ];
+    if (!res.ok) {
+      console.warn('OCR API returned non-ok response', res.status);
+      return [];
+    }
+
+    const payload = await res.json();
+    // Expecting payload.blocks: OcrBlock[]
+    if (Array.isArray(payload?.blocks)) return payload.blocks as OcrBlock[];
+    return [];
+  } catch (err) {
+    console.error('runOCR failed', err);
+    return [];
+  }
 }
 
 export function normalizeOCRToTextBoxes(

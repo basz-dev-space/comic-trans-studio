@@ -11,6 +11,7 @@
     x: number;
     y: number;
     fontSize: number;
+    lineHeight: number;
   };
 
   export let store: any;
@@ -27,11 +28,12 @@
       text: String(item.text || ''),
       x: Number(item.geometry?.x || 0),
       y: Number(item.geometry?.y || 0),
-      fontSize: Number(item.style?.fontSize || 0)
+      fontSize: Number(item.style?.fontSize || 0),
+      lineHeight: Number(item.style?.lineHeight || 1.2)
     }));
   };
 
-  const updateItem = (id: string, key: 'text' | 'x' | 'y' | 'fontSize', value: string) => {
+  const updateItem = (id: string, key: 'text' | 'x' | 'y' | 'fontSize' | 'lineHeight', value: string) => {
     if (key === 'text') store.syncGridToCanvas(id, { text: value });
     if (key === 'x' && !Number.isNaN(Number(value)))
       store.syncGridToCanvas(id, { geometry: { x: Number(value) } });
@@ -39,6 +41,8 @@
       store.syncGridToCanvas(id, { geometry: { y: Number(value) } });
     if (key === 'fontSize' && !Number.isNaN(Number(value)))
       store.syncGridToCanvas(id, { style: { fontSize: Number(value) } });
+    if (key === 'lineHeight' && !Number.isNaN(Number(value)))
+      store.syncGridToCanvas(id, { style: { lineHeight: Number(value) } });
     loadRows();
   };
 
@@ -92,6 +96,7 @@
             <th class="px-3 py-2 text-left">X</th>
             <th class="px-3 py-2 text-left">Y</th>
             <th class="px-3 py-2 text-left">Font</th>
+            <th class="px-3 py-2 text-left">Line Height</th>
           </tr>
         </thead>
         <tbody>
@@ -104,6 +109,7 @@
               <td class="px-3 py-2"><Input className="h-8 w-16 border border-[#334155] bg-[#0f172a] text-xs text-white" value={row.x} on:input={(e) => updateItem(row.id, 'x', (e.target as HTMLInputElement).value)} /></td>
               <td class="px-3 py-2"><Input className="h-8 w-16 border border-[#334155] bg-[#0f172a] text-xs text-white" value={row.y} on:input={(e) => updateItem(row.id, 'y', (e.target as HTMLInputElement).value)} /></td>
               <td class="px-3 py-2"><Input className="h-8 w-16 border border-[#334155] bg-[#0f172a] text-xs text-white" value={row.fontSize} on:input={(e) => updateItem(row.id, 'fontSize', (e.target as HTMLInputElement).value)} /></td>
+              <td class="px-3 py-2"><Input className="h-8 w-16 border border-[#334155] bg-[#0f172a] text-xs text-white" value={row.lineHeight} on:input={(e) => updateItem(row.id, 'lineHeight', (e.target as HTMLInputElement).value)} /></td>
             </tr>
           {/each}
         </tbody>

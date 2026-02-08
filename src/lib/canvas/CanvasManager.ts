@@ -39,12 +39,16 @@ export class CanvasManager {
     this.canvas.on('object:moving', this.debouncedChange);
     this.canvas.on('object:scaling', this.debouncedChange);
     this.canvas.on('text:changed', this.debouncedChange);
-    this.canvas.on('selection:created', (evt) =>
-      this.handlers.onSelectionChanged?.(String((evt.selected?.[0] as any)?.data?.id || null))
-    );
-    this.canvas.on('selection:updated', (evt) =>
-      this.handlers.onSelectionChanged?.(String((evt.selected?.[0] as any)?.data?.id || null))
-    );
+    this.canvas.on('selection:created', (evt) => {
+      const rawId = (evt.selected?.[0] as any)?.data?.id ?? null;
+      const id = rawId == null ? null : String(rawId);
+      this.handlers.onSelectionChanged?.(id);
+    });
+    this.canvas.on('selection:updated', (evt) => {
+      const rawId = (evt.selected?.[0] as any)?.data?.id ?? null;
+      const id = rawId == null ? null : String(rawId);
+      this.handlers.onSelectionChanged?.(id);
+    });
     this.canvas.on('selection:cleared', () => this.handlers.onSelectionChanged?.(null));
 
     return this.render(pageData);
@@ -128,8 +132,9 @@ export class CanvasManager {
         text: item.text,
         left: item.left,
         top: item.top,
-        width: item.width,
-        height: item.height,
+        // Account for fabric object's scaling so serialized sizes reflect visual size
+        width: Math.round(item.width * (item.scaleX ?? 1)),
+        height: Math.round(item.height * (item.scaleY ?? 1)),
         angle: item.angle,
         fontSize: item.fontSize,
         fontFamily: item.fontFamily,

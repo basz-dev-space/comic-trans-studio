@@ -68,7 +68,13 @@
   };
 
   const deleteSelection = () => {
+    const id = store?.project?.selectedTextBoxId ?? null;
     manager.removeSelection();
+    if (id) {
+      store.removeTextBox(id);
+      store.project.selectedTextBoxId = null;
+      store.notify();
+    }
   };
 
   const fileToDataUrl = (file: File) =>
@@ -109,13 +115,8 @@
   const toggleBackground = () => {
     const page = currentPage();
     if (!page) return;
-    if (store.project.showInpainted) {
-      page.inpaintedImageUrl = undefined;
-      store.project.showInpainted = false;
-    } else {
-      page.inpaintedImageUrl = page.imageUrl;
-      store.project.showInpainted = true;
-    }
+    // Only toggle the viewing flag. Do not overwrite the stored inpainted image URL.
+    store.project.showInpainted = !!store.project.showInpainted ? false : true;
     store.notify();
   };
 

@@ -57,6 +57,11 @@ const messages: Record<Locale, Record<string, string>> = {
     'project.emptyTitle': '📖 No chapters yet',
     'project.emptyDesc': 'Create your first chapter to start translating',
     'project.readyToEdit': 'Ready to edit',
+    'project.chapter': 'Chapter',
+    'project.save': 'Save',
+
+    'landing.subtitle': 'Secure, simple, seamless',
+    'landing.tagline': 'to comic success',
 
     'chapter.badge': 'Chapter studio',
     'chapter.back': 'Back',
@@ -75,6 +80,13 @@ const messages: Record<Locale, Record<string, string>> = {
     'chapter.propertiesHintA': 'Background image is fixed to page bounds for stable comic-page editing.',
     'chapter.propertiesHintB': 'Drag panel dividers to resize pages list and inspector/data area.',
     'chapter.propertiesHintC': 'All edits are auto-saved and persisted to chapter state.',
+    'chapter.saveSaving': 'Saving…',
+    'chapter.savePending': 'Unsaved changes',
+    'chapter.saveSaved': 'Saved',
+    'chapter.saveError': 'Save failed',
+    'chapter.saveIdle': 'No changes yet',
+    'chapter.saveSuccess': 'Changes saved',
+    'chapter.saveFailed': 'Could not save changes',
 
     'grid.title': 'Text Data Grid',
     'grid.items': 'items',
@@ -139,6 +151,11 @@ const messages: Record<Locale, Record<string, string>> = {
     'project.emptyTitle': '📖 ยังไม่มีบท',
     'project.emptyDesc': 'สร้างบทแรกเพื่อเริ่มแปลได้เลย',
     'project.readyToEdit': 'พร้อมแก้ไข',
+    'project.chapter': 'บท',
+    'project.save': 'บันทึก',
+
+    'landing.subtitle': 'ปลอดภัย ง่าย บิดสนใจ',
+    'landing.tagline': 'สู่ความสำเร็จของคอมิก',
 
     'chapter.badge': 'สตูดิโอบท',
     'chapter.back': 'กลับ',
@@ -157,6 +174,13 @@ const messages: Record<Locale, Record<string, string>> = {
     'chapter.propertiesHintA': 'รูปพื้นหลังจะถูกล็อกให้พอดีกับขนาดหน้าคอมิกเสมอ',
     'chapter.propertiesHintB': 'ลากตัวแบ่งเพื่อปรับขนาดแผงหน้ารายการและแผงด้านขวาได้',
     'chapter.propertiesHintC': 'ทุกการแก้ไขจะบันทึกอัตโนมัติลงสถานะของบท',
+    'chapter.saveSaving': 'กำลังบันทึก…',
+    'chapter.savePending': 'มีการเปลี่ยนแปลงที่ยังไม่บันทึก',
+    'chapter.saveSaved': 'บันทึกแล้ว',
+    'chapter.saveError': 'บันทึกล้มเหลว',
+    'chapter.saveIdle': 'ยังไม่มีการเปลี่ยนแปลง',
+    'chapter.saveSuccess': 'บันทึกการเปลี่ยนแปลงแล้ว',
+    'chapter.saveFailed': 'ไม่สามารถบันทึกการเปลี่ยนแปลงได้',
 
     'grid.title': 'ตารางข้อความ',
     'grid.items': 'รายการ',

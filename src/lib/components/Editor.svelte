@@ -1,225 +1,81 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { Canvas, FabricImage, IText, Rect, Textbox } from 'fabric';
   import { Card } from '$lib/components/ui/card';
   import { locale, t } from '$lib/i18n';
+  import { CanvasManager } from '$lib/canvas/CanvasManager';
+  import { translatePageText } from '$lib/services/translate';
+  import { inpaintPage } from '$lib/services/inpaint';
 
   export let store: any;
   export let pageId = 0;
 
   let canvasEl: HTMLCanvasElement;
-  let fabricCanvas: Canvas;
-  let isApplyingState = false;
-  let isSavingState = false;
-  let stopChangeWatcher: undefined | (() => void);
   let fileInputEl: HTMLInputElement;
+  let manager: CanvasManager;
+  let stopChangeWatcher: undefined | (() => void);
+  let isApplyingState = false;
 
-  const serializeCommon = (obj: any) => ({
-    id: obj.data?.id || `obj_${Math.random().toString(36).slice(2, 10)}`,
-    type: obj.type,
-    left: obj.left,
-    top: obj.top,
-    width: obj.width,
-    height: obj.height,
-    scaleX: obj.scaleX,
-    scaleY: obj.scaleY,
-    angle: obj.angle,
-    opacity: obj.opacity,
-    flipX: obj.flipX,
-    flipY: obj.flipY,
-    skewX: obj.skewX,
-    skewY: obj.skewY,
-    originX: obj.originX,
-    originY: obj.originY
-  });
+  const currentPage = () => store.pages?.[pageId];
 
-  const savePageState = () => {
-    if (!fabricCanvas || isApplyingState || !store.pages[pageId]) return;
-
-    isSavingState = true;
-
-    try {
-      const data = fabricCanvas
-        .getObjects()
-        .filter((obj: any) => obj.data?.isBackground !== true)
-        .map((obj: any) => ({
-          ...serializeCommon(obj),
-          src: obj.type === 'image' ? obj.getSrc?.() : undefined,
-          text: obj.text,
-          fontSize: obj.fontSize,
-          fontFamily: obj.fontFamily,
-          fontWeight: obj.fontWeight,
-          fontStyle: obj.fontStyle,
-          textAlign: obj.textAlign,
-          lineHeight: obj.lineHeight,
-          charSpacing: obj.charSpacing,
-          underline: obj.underline,
-          linethrough: obj.linethrough,
-          overline: obj.overline,
-          stroke: obj.stroke,
-          strokeWidth: obj.strokeWidth,
-          fill: obj.fill,
-          backgroundColor: obj.backgroundColor
-        }));
-
-      store.pages[pageId] = {
-        ...store.pages[pageId],
-        width: fabricCanvas.getWidth(),
-        height: fabricCanvas.getHeight(),
-        objects: data
-      };
-
-      store.notify();
-    } finally {
-      isSavingState = false;
-    }
+  const syncFromCanvas = () => {
+    if (isApplyingState) return;
+    manager.serializeTextObjects().forEach((item) => store.syncCanvasToGrid(item));
+    store.notify();
   };
 
-  const buildFabricOptions = (object: any) => ({
-    left: object.left ?? 0,
-    top: object.top ?? 0,
-    width: object.width,
-    height: object.height,
-    scaleX: object.scaleX ?? 1,
-    scaleY: object.scaleY ?? 1,
-    angle: object.angle ?? 0,
-    opacity: object.opacity ?? 1,
-    flipX: object.flipX ?? false,
-    flipY: object.flipY ?? false,
-    skewX: object.skewX ?? 0,
-    skewY: object.skewY ?? 0,
-    originX: object.originX,
-    originY: object.originY,
-    stroke: object.stroke,
-    strokeWidth: object.strokeWidth,
-    fill: object.fill,
-    backgroundColor: object.backgroundColor
-  });
+  const renderPage = async () => {
+    const page = currentPage();
+    if (!page || !manager) return;
 
-  const setBackgroundImage = async (src?: string) => {
-    if (!fabricCanvas || !src) return;
-    try {
-      const page = store.pages[pageId];
-      const background = await FabricImage.fromURL(src);
-      const scale = Math.min(page.width / background.width!, page.height / background.height!);
-      background.set({
-        left: 0,
-        top: 0,
-        selectable: false,
-        evented: false,
-        scaleX: scale,
-        scaleY: scale
-      });
-      background.set('data', { isBackground: true, id: 'bg_fixed' });
-      fabricCanvas.add(background);
-      fabricCanvas.sendObjectToBack(background);
-    } catch {
-      // Ignore background loading errors and keep editor usable.
-    }
-  };
-
-  const loadPageState = async () => {
-    if (!fabricCanvas || !store.pages[pageId]) return;
-
-    const page = store.pages[pageId];
     isApplyingState = true;
-
-    fabricCanvas.clear();
-    fabricCanvas.setDimensions({ width: page.width, height: page.height });
-
-    if (page.backgroundSrc) {
-      await setBackgroundImage(page.backgroundSrc);
+    try {
+      await manager.render(page);
+    } finally {
+      isApplyingState = false;
     }
-
-    for (const object of page.objects || []) {
-      if (object.type === 'i-text' || object.type === 'textbox' || object.type === 'text') {
-        const textOptions = {
-          ...buildFabricOptions(object),
-          fontSize: Number(object.fontSize || 36),
-          fontFamily: object.fontFamily,
-          fontWeight: object.fontWeight,
-          fontStyle: object.fontStyle,
-          textAlign: object.textAlign,
-          lineHeight: object.lineHeight,
-          charSpacing: object.charSpacing,
-          underline: object.underline,
-          linethrough: object.linethrough,
-          overline: object.overline
-        };
-
-        const text =
-          object.type === 'textbox'
-            ? new Textbox(object.text || '', textOptions)
-            : new IText(object.text || '', textOptions);
-
-        text.set('data', { id: object.id });
-        fabricCanvas.add(text);
-      }
-
-      if (object.type === 'image' && object.src) {
-        try {
-          const image = await FabricImage.fromURL(object.src as string);
-          image.set(buildFabricOptions(object));
-          image.set('data', { id: object.id });
-          fabricCanvas.add(image);
-        } catch {
-          continue;
-        }
-      }
-
-      if (object.type === 'rect') {
-        const rect = new Rect({
-          ...buildFabricOptions(object),
-          width: object.width || 240,
-          height: object.height || 120
-        });
-        rect.set('data', { id: object.id });
-        fabricCanvas.add(rect);
-      }
-    }
-
-    fabricCanvas.renderAll();
-    isApplyingState = false;
   };
 
   const addTextLayer = () => {
-    const text = new IText('New text', {
-      left: 80,
-      top: 80,
-      fontSize: 42,
-      fill: '#111827'
+    store.syncCanvasToGrid({
+      text: 'New text',
+      originalText: 'New text',
+      left: 90,
+      top: 90,
+      width: 280,
+      height: 90,
+      fontSize: 34,
+      fill: '#ffffff',
+      backgroundColor: 'rgba(15,23,42,0.65)',
+      bubbleShape: 'rounded'
     });
-    text.set('data', { id: `obj_${Math.random().toString(36).slice(2, 10)}` });
-    fabricCanvas.add(text);
-    fabricCanvas.setActiveObject(text);
-    savePageState();
+    store.notify();
   };
 
   const addShapeLayer = () => {
-    const rect = new Rect({
-      left: 110,
-      top: 110,
-      width: 220,
+    store.syncCanvasToGrid({
+      text: 'Bubble',
+      originalText: 'Bubble',
+      left: 130,
+      top: 130,
+      width: 280,
       height: 120,
-      fill: '#f5c088',
-      stroke: '#d97b7d',
-      strokeWidth: 2,
-      rx: 12,
-      ry: 12
+      fontSize: 30,
+      fill: '#e2e8f0',
+      backgroundColor: 'rgba(79,70,229,0.35)',
+      bubbleShape: 'ellipse'
     });
-    rect.set('data', { id: `obj_${Math.random().toString(36).slice(2, 10)}` });
-    fabricCanvas.add(rect);
-    fabricCanvas.setActiveObject(rect);
-    savePageState();
+    store.notify();
   };
 
   const deleteSelection = () => {
-    const target: any = fabricCanvas?.getActiveObject();
-    if (!target || target.data?.isBackground) return;
-    fabricCanvas.remove(target);
-    savePageState();
+    const id = store?.project?.selectedTextBoxId ?? null;
+    manager.removeSelection();
+    if (id) {
+      store.removeTextBox(id);
+      store.project.selectedTextBoxId = null;
+      store.notify();
+    }
   };
-
 
   const fileToDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -233,67 +89,83 @@
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
     const src = await fileToDataUrl(file);
-
-    try {
-      const image = await FabricImage.fromURL(src);
-      image.set({ left: 120, top: 120, scaleX: 0.35, scaleY: 0.35 });
-      image.set('data', { id: `obj_${Math.random().toString(36).slice(2, 10)}` });
-      fabricCanvas.add(image);
-      fabricCanvas.setActiveObject(image);
-      savePageState();
-    } finally {
-      if (fileInputEl) fileInputEl.value = '';
-    }
+    const page = currentPage();
+    if (!page) return;
+    page.imageUrl = src;
+    store.notify();
+    if (fileInputEl) fileInputEl.value = '';
   };
 
-  onMount(() => {
-    fabricCanvas = new Canvas(canvasEl, {
-      backgroundColor: '#ffffff',
-      preserveObjectStacking: true
+  const runTranslate = async () => {
+    const page = currentPage();
+    if (!page) return;
+    const translated = await translatePageText(
+      page.textBoxes.map((item: any) => ({ id: item.id, originalText: item.originalText }))
+    );
+    store.batchUpdateTranslatedText(translated);
+  };
+
+  const runCleanPage = async () => {
+    const page = currentPage();
+    if (!page) return;
+    page.inpaintedImageUrl = await inpaintPage(page.imageUrl, page.textBoxes);
+    store.notify();
+  };
+
+  const toggleBackground = () => {
+    const page = currentPage();
+    if (!page) return;
+    // Only toggle the viewing flag. Do not overwrite the stored inpainted image URL.
+    store.project.showInpainted = !!store.project.showInpainted ? false : true;
+    store.notify();
+  };
+
+  onMount(async () => {
+    manager = new CanvasManager({
+      onObjectsChanged: syncFromCanvas,
+      onSelectionChanged: (id) => {
+        store.project.selectedTextBoxId = id;
+        store.notify();
+      }
     });
 
-    const onChanged = () => savePageState();
-    fabricCanvas.on('object:modified', onChanged);
-    fabricCanvas.on('object:moving', onChanged);
-    fabricCanvas.on('object:scaling', onChanged);
-    fabricCanvas.on('object:removed', onChanged);
-    fabricCanvas.on('object:added', onChanged);
-    fabricCanvas.on('text:changed', onChanged);
-
-    loadPageState();
+    const page = currentPage();
+    if (page) await manager.init(canvasEl, page);
 
     stopChangeWatcher = store.onChange(() => {
-      if (isSavingState) return;
       if (store.activePageId !== pageId) return;
-      loadPageState();
+      renderPage();
     });
   });
 
   $: if (store && typeof pageId === 'number') {
     store.activePageId = pageId;
-    if (fabricCanvas) {
-      loadPageState();
-    }
+    renderPage();
   }
 
   onDestroy(() => {
     stopChangeWatcher?.();
-    fabricCanvas?.dispose();
+    manager?.dispose();
   });
 </script>
 
-<Card className="flex h-full w-full min-h-0 flex-col overflow-hidden p-0">
-  <div class="flex flex-wrap items-center gap-2 border-b border-[#f0d2b8] bg-white px-4 py-3">
-    <span class="mr-auto text-xs text-[#7A603A]">{t($locale, 'editor.help')}</span>
-    <button class="rounded-md border border-[#f0d2b8] px-3 py-1 text-xs font-semibold text-[#160204] hover:bg-[#fff9fa]" on:click={addTextLayer}>{t($locale, 'editor.addText')}</button>
-    <button class="rounded-md border border-[#f0d2b8] px-3 py-1 text-xs font-semibold text-[#160204] hover:bg-[#fff9fa]" on:click={addShapeLayer}>{t($locale, 'editor.addShape')}</button>
-    <button class="rounded-md border border-[#f0d2b8] px-3 py-1 text-xs font-semibold text-[#160204] hover:bg-[#fff9fa]" on:click={() => fileInputEl?.click()}>{t($locale, 'editor.addImage')}</button>
-    <button class="rounded-md border border-[#e18e90] px-3 py-1 text-xs font-semibold text-[#e18e90] hover:bg-[#fff9fa]" on:click={deleteSelection}>{t($locale, 'editor.remove')}</button>
-    <input bind:this={fileInputEl} type="file" class="hidden" accept="image/*" on:change={uploadOverlayImage} />
+<Card className="relative flex h-full w-full min-h-0 flex-col overflow-hidden border border-[#1e293b] bg-[#020617] p-0">
+  <div class="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2">
+    <div class="pointer-events-auto flex items-center gap-2 rounded-2xl border border-white/20 bg-black/50 px-3 py-2 backdrop-blur-md">
+      <span class="mr-2 text-xs text-slate-300">{t($locale, 'editor.help')}</span>
+      <button class="rounded-md border border-slate-600 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800" on:click={addTextLayer}>{t($locale, 'editor.addText')}</button>
+      <button class="rounded-md border border-slate-600 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800" on:click={addShapeLayer}>{t($locale, 'editor.addShape')}</button>
+      <button class="rounded-md border border-slate-600 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800" on:click={runTranslate}>Translate page</button>
+      <button class="rounded-md border border-slate-600 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800" on:click={runCleanPage}>Clean page</button>
+      <button class="rounded-md border border-indigo-400/70 px-3 py-1 text-xs font-semibold text-indigo-100 hover:bg-indigo-500/20" on:click={toggleBackground}>Show {store.project?.showInpainted ? 'original' : 'cleaned'}</button>
+      <button class="rounded-md border border-slate-600 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800" on:click={() => fileInputEl?.click()}>{t($locale, 'editor.addImage')}</button>
+      <button class="rounded-md border border-rose-500/60 px-3 py-1 text-xs font-semibold text-rose-200 hover:bg-rose-500/20" on:click={deleteSelection}>{t($locale, 'editor.remove')}</button>
+      <input bind:this={fileInputEl} type="file" class="hidden" accept="image/*" on:change={uploadOverlayImage} />
+    </div>
   </div>
 
-  <div class="flex min-h-0 flex-1 overflow-auto p-4">
-    <div class="mx-auto h-fit w-fit rounded-2xl border border-[#E3D5AB] bg-[#f8f8f7] p-2">
+  <div class="flex min-h-0 flex-1 overflow-auto p-5 pt-20">
+    <div class="mx-auto h-fit w-fit rounded-2xl border border-[#334155] bg-[#0b1120] p-2 shadow-2xl">
       <canvas bind:this={canvasEl}></canvas>
     </div>
   </div>

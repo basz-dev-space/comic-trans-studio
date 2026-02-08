@@ -1,5 +1,5 @@
 import { redirect, type Handle } from '@sveltejs/kit';
-import { db } from '$lib/server/data';
+import { getRepository } from '$lib/server/repository';
 
 const isProtectedPath = (pathname: string) =>
   pathname.startsWith('/projects') || pathname.startsWith('/project') || pathname.startsWith('/api/project');
@@ -29,7 +29,8 @@ const forbidden = (pathname: string) => {
 export const handle: Handle = async ({ event, resolve }) => {
   const pathname = event.url.pathname;
   const token = event.cookies.get('session');
-  const user = db.getUserBySession(token);
+  const repo = await getRepository();
+  const user = await repo.getUserBySession(token);
   event.locals.user = user;
 
   if (!user && isProtectedPath(pathname)) {
@@ -40,18 +41,17 @@ export const handle: Handle = async ({ event, resolve }) => {
     const segments = pathname.split('/').filter(Boolean);
 
     if (segments[0] === 'project' && segments[1] === 'chapter' && segments[2]) {
-      const chapter = db.getChapterById(segments[2]);
-      const project = chapter ? db.getProjectById(chapter.projectId) : null;
+      const chapter = await repo.getChapterById(segments[2]);
+      const project = chapter ? await repo.getProjectById(chapter.projectId) : null;
       if (!chapter || !project || project.ownerId !== user.id) {
         return forbidden(pathname);
       }
     } else if (segments[0] === 'project' && segments[1]) {
-      const project = db.getProjectById(segments[1]);
+      const project = await repo.getProjectById(segments[1]);
       if (!project || project.ownerId !== user.id) {
         return forbidden(pathname);
       }
     }
-
 
     if (segments[0] === 'project' && segments[1] && event.request.method === 'POST') {
       const actionKeys = [...event.url.searchParams.keys()];
@@ -62,7 +62,7 @@ export const handle: Handle = async ({ event, resolve }) => {
         try {
           const form = await event.request.clone().formData();
           const chapterId = String(form.get('chapterId') ?? '');
-          const chapter = db.getChapterById(chapterId);
+          const chapter = await repo.getChapterById(chapterId);
           if (!chapter || chapter.projectId !== segments[1]) {
             return forbidden(pathname);
           }
@@ -73,7 +73,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
 
     if (segments[0] === 'api' && segments[1] === 'project' && segments[2]) {
-      const project = db.getProjectById(segments[2]);
+      const project = await repo.getProjectById(segments[2]);
       if (!project || project.ownerId !== user.id) {
         return forbidden(pathname);
       }
@@ -82,7 +82,7 @@ export const handle: Handle = async ({ event, resolve }) => {
         try {
           const payload = await event.request.clone().json();
           const chapterId = String(payload.chapterId ?? '');
-          const chapter = db.getChapterById(chapterId);
+          const chapter = await repo.getChapterById(chapterId);
           if (!chapter || chapter.projectId !== project.id) {
             return forbidden(pathname);
           }

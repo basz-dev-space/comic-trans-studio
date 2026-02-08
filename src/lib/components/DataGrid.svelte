@@ -2,7 +2,7 @@
   import { onDestroy, onMount } from 'svelte';
   import { Input } from '$lib/components/ui/input';
   import { locale, t } from '$lib/i18n';
-  import { Search, ArrowUpDown, Trash2, Type, EyeOff, Filter, Group, ArrowUpDownIcon, PaintBucket, Share2 } from 'lucide-svelte';
+  import { Search, ArrowUpDown, Trash2, Type, EyeOff, Filter, Group, PaintBucket, Share2 } from 'lucide-svelte';
   import { notifications } from '$lib/services/notifications';
 
   type TextRow = {
@@ -135,7 +135,7 @@
       <button class="inline-flex items-center gap-1 rounded px-2 py-1 hover:bg-white"><EyeOff class="h-3.5 w-3.5" /> Hide fields</button>
       <button class="inline-flex items-center gap-1 rounded px-2 py-1 hover:bg-white"><Filter class="h-3.5 w-3.5" /> Filter</button>
       <button class="inline-flex items-center gap-1 rounded px-2 py-1 hover:bg-white"><Group class="h-3.5 w-3.5" /> Group</button>
-      <button class="inline-flex items-center gap-1 rounded px-2 py-1 hover:bg-white"><ArrowUpDownIcon class="h-3.5 w-3.5" /> Sort</button>
+      <button class="inline-flex items-center gap-1 rounded px-2 py-1 hover:bg-white"><ArrowUpDown class="h-3.5 w-3.5" /> Sort</button>
       <button class="inline-flex items-center gap-1 rounded px-2 py-1 hover:bg-white"><PaintBucket class="h-3.5 w-3.5" /> Color</button>
       <button class="ml-auto inline-flex items-center gap-1 rounded px-2 py-1 hover:bg-white"><Share2 class="h-3.5 w-3.5" /> Share and sync</button>
     </div>

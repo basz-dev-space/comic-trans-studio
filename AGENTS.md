@@ -20,6 +20,7 @@ This document defines team standards and operational rules for AI agents working
   - **Why** the change was made (rationale)
   - **How** to validate (tests or manual steps)
   - **Skill(s)** used (name and purpose)
+  - **History & logs location**: Agents MUST write a log entry for each significant action to the repository path `.history/logs/` using a clear filename (for example `YYYYMMDD-HHMMSS-agentname-action.md`). Each log entry should include the required fields above. Agents must reference these log files in commits or PR descriptions so teammates and other agents can find them. AIs and agents can find historical logs in the workspace at `.history/logs/`.
 
 - Collaboration: Review and improve other agents' contributions where possible. Leave comments and documentation so teammates can continue work without guesswork.
 

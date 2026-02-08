@@ -351,12 +351,12 @@
       <button class="inline-flex items-center gap-1 rounded bg-white px-3 py-1.5 text-sm font-semibold text-[#2f343b]"><Table class="h-4 w-4" /> DataGrid</button>
 
       <div class="ml-auto flex gap-2">
-        <Button on:click={createPage} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]">New page</Button>
-        <Button variant="outline" on:click={addText} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]">Add text</Button>
-        <Button variant="outline" on:click={quickAdd} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]">Quick add</Button>
-        <Button variant="outline" on:click={() => importInputEl?.click()} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]"><ImageIcon class="mr-1 h-3.5 w-3.5" /> Import</Button>
-        <Button variant="outline" on:click={() => exportProjectZip(fabricStore)} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]"><Box class="mr-1 h-3.5 w-3.5" /> ZIP</Button>
-        <Button variant="outline" on:click={() => exportProjectPdf(fabricStore)} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]"><FileText class="mr-1 h-3.5 w-3.5" /> PDF</Button>
+        <Button on:click={createPage} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]">{t($locale, 'chapter.newPage')}</Button>
+        <Button variant="outline" on:click={addText} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]">{t($locale, 'chapter.addText')}</Button>
+        <Button variant="outline" on:click={quickAdd} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]">{t($locale, 'chapter.quick')}</Button>
+        <Button variant="outline" on:click={() => importInputEl?.click()} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]"><ImageIcon class="mr-1 h-3.5 w-3.5" /> {t($locale, 'chapter.importPages')}</Button>
+        <Button variant="outline" on:click={() => exportProjectZip(fabricStore)} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]"><Box class="mr-1 h-3.5 w-3.5" /> {t($locale, 'chapter.exportZip')}</Button>
+        <Button variant="outline" on:click={() => exportProjectPdf(fabricStore)} className="h-8 rounded bg-white px-3 text-xs font-semibold text-[#2f343b]"><FileText class="mr-1 h-3.5 w-3.5" /> {t($locale, 'chapter.exportPdf')}</Button>
       </div>
       <input bind:this={importInputEl} type="file" class="hidden" accept="image/*,.zip,.pdf,application/pdf" multiple on:change={handleImportFiles} />
     </div>
@@ -370,32 +370,35 @@
     </div>
   </div>
 
-  <div class="grid min-h-[56vh] grid-cols-1 md:grid-cols-[auto_1fr]">
+  <div class="flex h-[calc(100vh-280px)] gap-0 bg-[#eef1f5]">
     {#if showPagesPanel}
-      <aside class="bg-[#eef1f5]" style={`width:${leftPanelWidth}px`}>
+      <aside class="flex flex-col bg-[#eef1f5] overflow-hidden" style={`width:${leftPanelWidth}px; flex-shrink: 0;`}>
         <div class="border-b border-[#d9dde3] p-3 text-sm font-semibold text-[#2f343b]">Pages</div>
-        <div class="space-y-1 p-2">
+        <div class="flex-1 space-y-1 overflow-y-auto p-2">
           {#each pageThumbs as page}
-            <button
-              class={`flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm ${currentPageId === page.index ? 'bg-white font-semibold text-[#21242a]' : 'text-[#555b66] hover:bg-[#f8f9fb]'}`}
-              on:click={() => activePageId.set(page.index)}
-            >
-              <span class="h-5 w-5 rounded bg-white text-center text-xs leading-5">{page.index + 1}</span>
-              {page.name}
-            </button>
+            <div class="flex w-full items-center justify-between rounded px-2 py-2 text-sm">
+              <button class={`flex items-center gap-2 text-left ${currentPageId === page.index ? 'bg-white font-semibold text-[#21242a]' : 'text-[#555b66] hover:bg-[#f8f9fb]'}`} on:click={() => activePageId.set(page.index)}>
+                <span class="h-5 w-5 rounded bg-white text-center text-xs leading-5">{page.index + 1}</span>
+                <span class="truncate">{page.name}</span>
+              </button>
+              <div class="ml-2 flex items-center gap-1">
+                <button class="rounded p-1 hover:bg-white" on:click={() => fabricStore.movePage(page.index, Math.max(0, page.index - 1))} aria-label="Move up">▲</button>
+                <button class="rounded p-1 hover:bg-white" on:click={() => fabricStore.movePage(page.index, Math.min(fabricStore.pages.length - 1, page.index + 1))} aria-label="Move down">▼</button>
+              </div>
+            </div>
           {/each}
         </div>
       </aside>
     {/if}
 
     {#if showPagesPanel && showCanvasPanel}
-      <button class="hidden w-2 cursor-col-resize items-center justify-center bg-[#eef1f5] md:flex" on:mousedown={dragResize} aria-label="Resize pages panel">
-        <div class="h-8 w-0.5 bg-[#c9ced7]"></div>
+      <button class="w-2 cursor-col-resize items-center justify-center bg-[#d9dde3] hover:bg-[#c9ced7] flex" on:mousedown={dragResize} aria-label="Resize pages panel">
+        <div class="h-full w-0.5 bg-[#c9ced7]"></div>
       </button>
     {/if}
 
     {#if showCanvasPanel}
-      <section class="bg-[#ebedf1] p-4">
+      <section class="flex-1 bg-[#ebedf1] p-4 overflow-hidden">
         <Editor store={fabricStore} pageId={currentPageId} />
       </section>
     {/if}

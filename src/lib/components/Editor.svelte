@@ -12,6 +12,7 @@
 
   let canvasEl: HTMLCanvasElement;
   let fileInputEl: HTMLInputElement;
+  let wrapperEl: HTMLDivElement;
   let manager: CanvasManager;
   let stopChangeWatcher: undefined | (() => void);
   let removeKeyboardHandler: undefined | (() => void);
@@ -26,6 +27,7 @@
   $: hasBackground = Boolean(current?.imageUrl || current?.inpaintedImageUrl);
   $: hasTextLayers = Boolean(current?.textBoxes?.length);
   $: showCanvasEmptyState = !hasBackground && !hasTextLayers;
+  let fitScale = 1;
 
   const syncFromCanvas = () => {
     if (isApplyingState) return;
@@ -40,9 +42,20 @@
     isApplyingState = true;
     try {
       await manager.render(page);
+      computeFitScale();
     } finally {
       isApplyingState = false;
     }
+  };
+
+  const computeFitScale = () => {
+    const page = currentPage();
+    if (!page || !wrapperEl) return (fitScale = 1);
+    const paddingW = 48; // account for wrapper padding
+    const paddingH = 48;
+    const availW = Math.max(32, wrapperEl.clientWidth - paddingW);
+    const availH = Math.max(32, wrapperEl.clientHeight - paddingH);
+    fitScale = Math.min(1, Math.min(availW / page.width, availH / page.height));
   };
 
   const addTextLayer = () => {
@@ -171,6 +184,9 @@
     });
 
     removeKeyboardHandler = installKeyboardShortcuts();
+    const onResize = () => computeFitScale();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   });
 
   $: if (store && typeof pageId === 'number') {
@@ -199,26 +215,26 @@
     <input bind:this={fileInputEl} type="file" class="hidden" accept="image/*" on:change={uploadOverlayImage} />
   </div>
 
-  <div class="relative flex min-h-0 flex-1 items-center justify-center overflow-auto p-5">
-    <div class="rounded bg-[#cfd4db] p-6">
-      <div style={`transform: scale(${zoomPercent / 100}); transform-origin: top center;`} class="transition-transform duration-150">
-        <canvas bind:this={canvasEl}></canvas>
-      </div>
-    </div>
-
-    {#if showCanvasEmptyState}
-      <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div class="pointer-events-auto rounded bg-white/90 px-5 py-4 text-center text-sm text-[#4b5565] shadow-sm">
-          <p class="font-semibold text-[#273041]">Canvas is ready</p>
-          <p class="mt-1 text-xs">Import an image/PDF or add a text layer to start editing.</p>
-          <div class="mt-3 flex justify-center gap-2">
-            <button class="rounded bg-[#ff8b31] px-3 py-1.5 text-xs font-semibold text-white" on:click={openUploadPicker}>Import page</button>
-            <button class="rounded bg-[#1f2937] px-3 py-1.5 text-xs font-semibold text-white" on:click={addTextLayer}>Add text</button>
-          </div>
+    <div bind:this={wrapperEl} class="relative flex min-h-0 flex-1 items-center justify-center overflow-auto p-5" style="max-height: calc(100vh - 200px);">
+      <div class="rounded bg-[#cfd4db] p-6 flex-shrink-0">
+        <div style={`transform: scale(${fitScale * (zoomPercent / 100)}); transform-origin: top center;`} class="transition-transform duration-150">
+          <canvas bind:this={canvasEl}></canvas>
         </div>
       </div>
-    {/if}
-  </div>
+
+      {#if showCanvasEmptyState}
+        <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div class="pointer-events-auto rounded bg-white/90 px-5 py-4 text-center text-sm text-[#4b5565] shadow-sm">
+            <p class="font-semibold text-[#273041]">Canvas is ready</p>
+            <p class="mt-1 text-xs">Import an image/PDF or add a text layer to start editing.</p>
+            <div class="mt-3 flex justify-center gap-2">
+              <button class="rounded bg-[#ff8b31] px-3 py-1.5 text-xs font-semibold text-white" on:click={openUploadPicker}>Import page</button>
+              <button class="rounded bg-[#1f2937] px-3 py-1.5 text-xs font-semibold text-white" on:click={addTextLayer}>Add text</button>
+            </div>
+          </div>
+        </div>
+      {/if}
+    </div>
 
   <div class="flex items-center justify-end gap-2 bg-[#e3e7ec] px-3 py-2 text-xs text-[#464d58]">
     <span>{t($locale, 'editor.title')}</span>

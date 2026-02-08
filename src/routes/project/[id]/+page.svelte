@@ -43,7 +43,7 @@
         <article class="surface-card p-4">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p class="text-xs text-[#768093]">Chapter {index + 1}</p>
+              <p class="text-xs text-[#768093]">{t($locale, 'project.chapter')} {index + 1}</p>
               <a class="text-lg font-semibold text-[#1e2531] hover:text-[#ff8b31]" href={`/project/chapter/${chapter.id}`}>{chapter.name}</a>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -61,7 +61,7 @@
               <form method="POST" action="?/renameChapter" class="flex flex-col gap-2 sm:flex-row sm:items-end">
                 <input type="hidden" name="chapterId" value={chapter.id} />
                 <Input name="name" placeholder={t($locale, 'project.rename')} className="h-10 flex-1 rounded border-[#ccd3dc] bg-white" />
-                <Button type="submit" className="h-10 rounded bg-[#ff8b31] px-4 text-sm font-semibold text-white hover:bg-[#f57e22]">Save</Button>
+                <Button type="submit" className="h-10 rounded bg-[#ff8b31] px-4 text-sm font-semibold text-white hover:bg-[#f57e22]">{t($locale, 'project.save')}</Button>
               </form>
             </div>
           {/if}

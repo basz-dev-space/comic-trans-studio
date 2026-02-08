@@ -59,6 +59,22 @@ class EditorState {
     this.notify();
   }
 
+  movePage(oldIndex: number, newIndex: number) {
+    const pages = this.project.pages;
+    if (oldIndex < 0 || oldIndex >= pages.length || newIndex < 0 || newIndex >= pages.length) return;
+    const [item] = pages.splice(oldIndex, 1);
+    pages.splice(newIndex, 0, item);
+    // adjust active page if needed
+    if (this.project.activePageId === oldIndex) {
+      this.project.activePageId = newIndex;
+    } else if (this.project.activePageId > oldIndex && this.project.activePageId <= newIndex) {
+      this.project.activePageId -= 1;
+    } else if (this.project.activePageId < oldIndex && this.project.activePageId >= newIndex) {
+      this.project.activePageId += 1;
+    }
+    this.notify();
+  }
+
   loadProject(data: unknown) {
     this.project = ProjectSchema.parse(data);
     this.notify();

@@ -57,6 +57,11 @@ const messages: Record<Locale, Record<string, string>> = {
     'project.emptyTitle': '📖 No chapters yet',
     'project.emptyDesc': 'Create your first chapter to start translating',
     'project.readyToEdit': 'Ready to edit',
+    'project.chapter': 'Chapter',
+    'project.save': 'Save',
+
+    'landing.subtitle': 'Secure, simple, seamless',
+    'landing.tagline': 'to comic success',
 
     'chapter.badge': 'Chapter studio',
     'chapter.back': 'Back',
@@ -146,6 +151,11 @@ const messages: Record<Locale, Record<string, string>> = {
     'project.emptyTitle': '📖 ยังไม่มีบท',
     'project.emptyDesc': 'สร้างบทแรกเพื่อเริ่มแปลได้เลย',
     'project.readyToEdit': 'พร้อมแก้ไข',
+    'project.chapter': 'บท',
+    'project.save': 'บันทึก',
+
+    'landing.subtitle': 'ปลอดภัย ง่าย บิดสนใจ',
+    'landing.tagline': 'สู่ความสำเร็จของคอมิก',
 
     'chapter.badge': 'สตูดิโอบท',
     'chapter.back': 'กลับ',

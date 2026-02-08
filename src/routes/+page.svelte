@@ -9,10 +9,10 @@
 <main class="space-y-4 py-3">
   <section class="surface-card grid gap-5 p-6 lg:grid-cols-[1.2fr_1fr]">
     <div class="space-y-4">
-      <p class="text-sm text-[#7a818f]">Secure, simple, seamless</p>
+      <p class="text-sm text-[#7a818f]">{t($locale, 'landing.subtitle')}</p>
       <h1 class="text-display-lg max-w-[640px] leading-[0.95] text-[#151923]">
         <span class="text-[#ff8b31]">Fast-track</span><br />
-        {t($locale, 'landing.title').replace('Translate faster with a cleaner, one-screen workflow.', 'to comic success')}
+        {t($locale, 'landing.tagline')}
       </h1>
       <p class="max-w-[520px] text-sm text-[#687183]">{t($locale, 'landing.desc')}</p>
       <div class="flex flex-wrap gap-2">

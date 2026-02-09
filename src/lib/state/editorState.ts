@@ -81,7 +81,7 @@ class EditorState {
       this.lastSnapshot = previous;
       this.notify();
       return true;
-    } catch (e) {
+    } catch {
       return false;
     }
   }
@@ -96,7 +96,7 @@ class EditorState {
       this.lastSnapshot = next;
       this.notify();
       return true;
-    } catch (e) {
+    } catch {
       return false;
     }
   }
@@ -124,7 +124,8 @@ class EditorState {
 
   movePage(oldIndex: number, newIndex: number) {
     const pages = this.project.pages;
-    if (oldIndex < 0 || oldIndex >= pages.length || newIndex < 0 || newIndex >= pages.length) return;
+    if (oldIndex < 0 || oldIndex >= pages.length || newIndex < 0 || newIndex >= pages.length)
+      return;
     const [item] = pages.splice(oldIndex, 1);
     pages.splice(newIndex, 0, item);
     // adjust active page if needed
@@ -172,7 +173,8 @@ class EditorState {
     const next: TextBox = {
       id: incomingId,
       text: canvasObject.text ?? existing?.text ?? 'New text',
-      originalText: canvasObject.originalText ?? existing?.originalText ?? canvasObject.text ?? 'New text',
+      originalText:
+        canvasObject.originalText ?? existing?.originalText ?? canvasObject.text ?? 'New text',
       geometry: {
         x: canvasObject.left ?? existing?.geometry.x ?? 60,
         y: canvasObject.top ?? existing?.geometry.y ?? 60,
@@ -184,7 +186,10 @@ class EditorState {
         fontSize: canvasObject.fontSize ?? existing?.style.fontSize ?? 32,
         fontFamily: canvasObject.fontFamily ?? existing?.style.fontFamily ?? 'Inter',
         color: canvasObject.fill ?? existing?.style.color ?? '#ffffff',
-        bgColor: (canvasObject.backgroundColor as string | null | undefined) ?? existing?.style.bgColor ?? null,
+        bgColor:
+          (canvasObject.backgroundColor as string | null | undefined) ??
+          existing?.style.bgColor ??
+          null,
         bubbleShape: canvasObject.bubbleShape ?? existing?.style.bubbleShape ?? 'rounded',
         lineHeight: canvasObject.lineHeight ?? existing?.style.lineHeight ?? 1.2
       }

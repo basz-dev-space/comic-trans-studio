@@ -1,11 +1,26 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
+  import type { Snippet } from 'svelte';
 
-  export let variant: 'default' | 'outline' | 'ghost' = 'default';
-  export let className = '';
-  export let type: 'button' | 'submit' | 'reset' = 'button';
-  export let disabled = false;
-  export let title = '';
+  interface Props {
+    variant?: 'default' | 'outline' | 'ghost';
+    className?: string;
+    type?: 'button' | 'submit' | 'reset';
+    disabled?: boolean;
+    title?: string;
+    children: Snippet;
+    onclick?: () => void;
+  }
+
+  let {
+    variant = 'default',
+    className = '',
+    type = 'button',
+    disabled = false,
+    title = '',
+    children,
+    onclick
+  }: Props = $props();
 
   const variants = {
     default: 'bg-[#e18e90] text-white hover:bg-[#d97b7d] shadow-elevation-1 hover:shadow-elevation-2',
@@ -23,7 +38,7 @@
     variants[variant],
     className
   )}
-  on:click
+  onclick={onclick}
 >
-  <slot />
+  {@render children()}
 </button>

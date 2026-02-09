@@ -1,6 +1,6 @@
 import { createPrismaRepository } from './prismaRepository';
 import type { Repository } from './types';
-import { getDatabaseUrlInfo, getPrismaClient, hasDatabaseUrl } from '$lib/server/db/prisma';
+import { getPrismaClient, hasDatabaseUrl } from '$lib/server/db/prisma';
 
 let repositoryPromise: Promise<Repository> | null = null;
 

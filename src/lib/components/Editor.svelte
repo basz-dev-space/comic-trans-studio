@@ -148,7 +148,6 @@
   const zoomIn = () => (zoomPercent = Math.min(220, zoomPercent + 10));
   const zoomOut = () => (zoomPercent = Math.max(50, zoomPercent - 10));
   const zoomToFit = () => (zoomPercent = 100);
-  const announceHistoryPlaceholder = (type: 'undo' | 'redo') => undefined;
   const canUndo = () => store?.canUndo?.() ?? false;
   const canRedo = () => store?.canRedo?.() ?? false;
   const performUndo = () => store?.undo?.();

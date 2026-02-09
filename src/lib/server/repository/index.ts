@@ -22,12 +22,19 @@ const createRepository = async (): Promise<Repository> => {
     console.error('[repository] Failed to connect Prisma.', error);
     await prisma.$disconnect().catch(() => undefined);
     // Do not fall back to in-memory repository in production scenarios.
-    // Surface the error so the runtime (or deploy) can detect infrastructure issues.
-    throw new Error('Failed to connect to the database');
+    // Surface the original error so callers can observe the root cause and
+    // so the process can react (health checks, restarts).
+    throw error;
   }
 };
 
 export const getRepository = async () => {
   repositoryPromise ??= createRepository();
-  return repositoryPromise;
+  try {
+    return await repositoryPromise;
+  } catch (err) {
+    // Reset cache so transient failures can be retried on subsequent calls.
+    repositoryPromise = null;
+    throw err;
+  }
 };

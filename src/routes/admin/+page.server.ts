@@ -1,17 +1,27 @@
 import type { Actions, PageServerLoad } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db/prisma';
+import { getRepository } from '$lib/server/repository';
+import { createAdminSession, validateAdminSession, destroyAdminSession } from '$lib/server/adminSessions';
 import bcrypt from 'bcryptjs';
 
 const ADMIN_COOKIE = 'admin_session';
 
 export const load: PageServerLoad = async ({ cookies }) => {
-  const admin = cookies.get(ADMIN_COOKIE) === '1';
+  const token = cookies.get(ADMIN_COOKIE);
+  const admin = await validateAdminSession(token);
   if (!admin) return { admin: false };
 
-  const prisma = getPrismaClient();
-  const users = await prisma.user.findMany({ select: { id: true, email: true, name: true, createdAt: true } });
-  return { admin: true, users };
+  try {
+    const repo = await getRepository();
+    const users = await repo.listUsers();
+    return { admin: true, users };
+  } catch (error) {
+    console.error('[admin] Failed to load users', error);
+    // Admin access still allowed, but return an empty list if the DB/ repo is
+    // unavailable so the page can render without crashing.
+    return { admin: true, users: [] };
+  }
 };
 
 export const actions: Actions = {
@@ -26,7 +36,13 @@ export const actions: Actions = {
     if (!envUser || !envPass) return fail(500, { error: 'Admin credentials not configured' });
 
     if (username === envUser && password === envPass) {
-      cookies.set(ADMIN_COOKIE, '1', { path: '/', httpOnly: true, sameSite: 'lax' });
+      const token = await createAdminSession();
+      cookies.set(ADMIN_COOKIE, token, {
+        path: '/',
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production'
+      });
       throw redirect(303, '/admin');
     }
 
@@ -34,12 +50,15 @@ export const actions: Actions = {
   },
 
   logout: async ({ cookies }) => {
+    const token = cookies.get(ADMIN_COOKIE);
+    await destroyAdminSession(token);
     cookies.delete(ADMIN_COOKIE, { path: '/' });
     throw redirect(303, '/');
   },
 
   createUser: async ({ request, cookies }) => {
-    const admin = cookies.get(ADMIN_COOKIE) === '1';
+    const token = cookies.get(ADMIN_COOKIE);
+    const admin = await validateAdminSession(token);
     if (!admin) return fail(403, { error: 'Forbidden' });
 
     const data = await request.formData();
@@ -49,12 +68,17 @@ export const actions: Actions = {
 
     if (!email || !password) return fail(400, { error: 'Email and password required' });
 
-    const prisma = getPrismaClient();
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) return fail(409, { error: 'User already exists' });
+    try {
+      const prisma = getPrismaClient();
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing) return fail(409, { error: 'User already exists' });
 
-    const hash = await bcrypt.hash(password, 10);
-    await prisma.user.create({ data: { email, passwordHash: hash, name } });
-    return { success: true };
+      const hash = await bcrypt.hash(password, 10);
+      await prisma.user.create({ data: { email, passwordHash: hash, name } });
+      return { success: true };
+    } catch (error) {
+      console.error('[admin] createUser failed', error);
+      return fail(500, { error: 'Failed to create user' });
+    }
   }
 };

@@ -4,15 +4,21 @@ import type { Chapter, ChapterPage, Project, Repository, User } from './types';
 
 // The memory repository is intended for local development and testing only.
 // Avoid shipping hardcoded credentials or unbounded session storage.
-// Demo user for local development. Password is hashed with bcrypt.
-const users: User[] = [
-  {
-    id: 'u_demo',
-    email: 'demo@comictrans.local',
-    password: bcrypt.hashSync('demo123', 10),
-    name: 'Demo User'
-  }
-];
+// The in-memory repository is strictly for development/testing. It must not
+// silently enable demo credentials in production. The demo user will only be
+// initialized when the environment explicitly allows it (development or
+// when ALLOW_INSECURE_MEMORY=true).
+const ALLOW_INSECURE_MEMORY = process.env.ALLOW_INSECURE_MEMORY === 'true' || process.env.NODE_ENV !== 'production';
+const users: User[] = ALLOW_INSECURE_MEMORY
+  ? [
+      {
+        id: 'u_demo',
+        email: 'demo@comictrans.local',
+        password: bcrypt.hashSync('demo123', 10),
+        name: 'Demo User'
+      }
+    ]
+  : [];
 
 const projects: Project[] = [{ id: 'p_demo', ownerId: 'u_demo', name: 'Demo Manga', chapterIds: ['c_demo_1'] }];
 
@@ -34,6 +40,15 @@ const secureToken = () => {
     return randomBytes(32).toString('hex');
   }
 };
+
+// Periodically clean up expired sessions to avoid unbounded memory growth.
+const SESSION_CLEANUP_INTERVAL_MS = 1000 * 60 * 60; // 1 hour
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of sessions) {
+    if (v.expiresAt && v.expiresAt < now) sessions.delete(k);
+  }
+}, SESSION_CLEANUP_INTERVAL_MS).unref?.();
 
 export const memoryRepository: Repository = {
   async findUserByCredentials(email: string, password: string) {
@@ -68,6 +83,10 @@ export const memoryRepository: Repository = {
       return null;
     }
     return this.getUserById(meta.userId);
+  },
+  async listUsers() {
+    // Return a shallow copy to avoid accidental mutation of internal state
+    return users.map((u) => ({ ...u }));
   },
   async getProjectsByOwner(ownerId: string) {
     return projects.filter((project) => project.ownerId === ownerId);

@@ -212,4 +212,9 @@ export const createPrismaRepository = (prisma: any): Repository => ({
 
     return refreshed ? mapChapter(refreshed) : null;
   }
+,
+  async listUsers() {
+    const rows = await prisma.user.findMany({ select: { id: true, email: true, name: true, passwordHash: true, createdAt: true } });
+    return rows.map(mapUser);
+  }
 });

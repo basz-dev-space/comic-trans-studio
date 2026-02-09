@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { invalidate } from '$app/navigation';
+  import { invalidateAll } from '$app/navigation';
   export let data: any;
   let username = '';
   let password = '';
@@ -14,11 +14,11 @@
     form.set('name', newName);
     form.set('password', newPassword);
     const res = await fetch('?/createUser', { method: 'POST', body: form });
-    if (res.ok) {
+      if (res.ok) {
       newEmail = '';
       newName = '';
       newPassword = '';
-      await invalidate();
+      await invalidateAll();
     } else {
       const body = await res.json().catch(() => ({}));
       alert(body.error || 'Failed to create user');

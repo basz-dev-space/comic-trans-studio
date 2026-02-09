@@ -44,4 +44,5 @@ export interface Repository {
   deleteChapter(chapterId: string): Promise<boolean>;
   getChapterById(chapterId: string): Promise<Chapter | null>;
   saveChapterPages(chapterId: string, pages: ChapterPage[]): Promise<Chapter | null>;
+  listUsers(): Promise<User[]>;
 }

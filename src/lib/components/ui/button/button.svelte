@@ -4,6 +4,8 @@
   export let variant: 'default' | 'outline' | 'ghost' = 'default';
   export let className = '';
   export let type: 'button' | 'submit' | 'reset' = 'button';
+  export let disabled = false;
+  export let title = '';
 
   const variants = {
     default: 'bg-[#e18e90] text-white hover:bg-[#d97b7d] shadow-elevation-1 hover:shadow-elevation-2',
@@ -14,6 +16,8 @@
 
 <button
   {type}
+  {disabled}
+  {title}
   class={cn(
     'inline-flex h-10 items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e18e90] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
     variants[variant],

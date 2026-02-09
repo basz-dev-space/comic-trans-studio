@@ -1,5 +1,4 @@
 import { fail, redirect } from '@sveltejs/kit';
-import bcrypt from 'bcryptjs';
 import type { Actions, PageServerLoad } from './$types';
 import { getRepository } from '$lib/server/repository';
 

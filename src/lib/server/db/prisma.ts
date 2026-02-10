@@ -97,7 +97,18 @@ const findDatabaseUrl = (): DatabaseUrlInfo | null => {
   }
 
   cachedDatabaseInfo = readEnvFilePath() ?? readEnvFile();
-  return cachedDatabaseInfo ?? null;
+  
+  // If no DATABASE_URL is found, use a default SQLite database path
+  if (!cachedDatabaseInfo) {
+    const defaultDbPath = resolve(process.cwd(), 'prisma/dev.db');
+    cachedDatabaseInfo = {
+      key: 'dotenv:DATABASE_URL',
+      value: `file:${defaultDbPath}`
+    };
+    console.info(`[db] No DATABASE_URL found, using default: ${cachedDatabaseInfo.value}`);
+  }
+  
+  return cachedDatabaseInfo;
 };
 
 export const getDatabaseUrlInfo = () => findDatabaseUrl();

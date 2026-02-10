@@ -5,13 +5,6 @@ import { getPrismaClient, hasDatabaseUrl } from '$lib/server/db/prisma';
 let repositoryPromise: Promise<Repository> | null = null;
 
 const createRepository = async (): Promise<Repository> => {
-  if (!hasDatabaseUrl()) {
-    throw new Error(
-      'DATABASE_URL environment variable is not set. ' +
-        'Please configure a SQLite database URL (e.g., file:./dev.db) in your .env file.'
-    );
-  }
-
   const prisma = getPrismaClient();
 
   try {

@@ -1,7 +1,20 @@
 {
-  "mcpServers": {
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
     "svelte": {
-      "url": "https://mcp.svelte.dev/mcp"
+      "type": "remote",
+      "url": "https://mcp.svelte.dev/mcp",
+      "enabled": true
+    },
+    "deepwiki": {
+      "type": "remote",
+      "url": "https://mcp.deepwiki.com/mcp",
+      "enabled": true
+    },
+    "semgrep": {
+      "type": "remote",
+      "url": "https://mcp.semgrep.ai/sse",
+      "enabled": true
     }
   }
 }

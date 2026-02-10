@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  projects Project[]
+  sessions Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Project {
+  id          String    @id @default(cuid())
+  ownerId     String
+  name        String
+  status      String    @default("active")
+  sourceLang  String    @default("ja")
+  targetLang  String    @default("en")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  owner    User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  chapters Chapter[]
+
+  @@index([ownerId, updatedAt(sort: Desc)])
+}
+
+model Chapter {
+  id         String    @id @default(cuid())
+  projectId  String
+  name       String
+  orderIndex Int       @default(0)
+  version    Int       @default(1)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pages   Page[]
+
+  @@index([projectId, orderIndex])
+}
+
+model Page {
+  id                String    @id @default(cuid())
+  chapterId         String
+  orderIndex        Int
+  name              String
+  width             Int
+  height            Int
+  backgroundSrc     String?
+  inpaintedImageUrl String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  chapter   Chapter      @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  textBoxes TextBox[]
+
+  @@unique([chapterId, orderIndex])
+  @@index([chapterId])
+}
+
+model TextBox {
+  id           String   @id @default(cuid())
+  pageId       String
+  stableId     String
+  type         String   @default("i-text")
+  text         String
+  left         Float
+  top          Float
+  width        Float
+  height       Float
+  angle        Float
+  fontSize     Float
+  fontFamily   String
+  fill         String
+  lineHeight   Float
+  originalText String?
+  geometry     Json?
+  style        Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, stableId])
+  @@index([pageId])
+}

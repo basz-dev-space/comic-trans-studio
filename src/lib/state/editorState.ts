@@ -23,6 +23,10 @@ export type GridPatch = Partial<Omit<TextBox, 'id'>>;
 class EditorState {
   project: ProjectData = defaultProject();
   private listeners = new Set<() => void>();
+  // simple undo/redo stacks storing serialized project snapshots
+  private past: string[] = [];
+  private future: string[] = [];
+  private lastSnapshot: string | null = null;
 
   get pages() {
     return this.project.pages;
@@ -43,7 +47,66 @@ class EditorState {
 
   notify() {
     this.project.metadata.updatedAt = new Date().toISOString();
+    this.pushSnapshotIfNeeded();
     for (const listener of this.listeners) listener();
+  }
+
+  private serializeProject() {
+    try {
+      return JSON.stringify(this.project);
+    } catch {
+      return '';
+    }
+  }
+
+  private pushSnapshotIfNeeded() {
+    const snap = this.serializeProject();
+    if (!snap) return;
+    if (this.lastSnapshot === snap) return;
+    this.past.push(this.lastSnapshot ?? snap);
+    // cap history
+    if (this.past.length > 100) this.past.shift();
+    this.lastSnapshot = snap;
+    // clear redo stack when new change occurs
+    this.future = [];
+  }
+
+  undo() {
+    if (!this.canUndo()) return false;
+    const current = this.serializeProject();
+    if (current) this.future.push(current);
+    const previous = this.past.pop() as string;
+    try {
+      this.project = ProjectSchema.parse(JSON.parse(previous));
+      this.lastSnapshot = previous;
+      this.notify();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  redo() {
+    if (!this.canRedo()) return false;
+    const current = this.serializeProject();
+    if (current) this.past.push(current);
+    const next = this.future.pop() as string;
+    try {
+      this.project = ProjectSchema.parse(JSON.parse(next));
+      this.lastSnapshot = next;
+      this.notify();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  canUndo() {
+    return this.past.length > 0;
+  }
+
+  canRedo() {
+    return this.future.length > 0;
   }
 
   addPage(imageUrl?: string) {
@@ -61,7 +124,8 @@ class EditorState {
 
   movePage(oldIndex: number, newIndex: number) {
     const pages = this.project.pages;
-    if (oldIndex < 0 || oldIndex >= pages.length || newIndex < 0 || newIndex >= pages.length) return;
+    if (oldIndex < 0 || oldIndex >= pages.length || newIndex < 0 || newIndex >= pages.length)
+      return;
     const [item] = pages.splice(oldIndex, 1);
     pages.splice(newIndex, 0, item);
     // adjust active page if needed
@@ -109,7 +173,8 @@ class EditorState {
     const next: TextBox = {
       id: incomingId,
       text: canvasObject.text ?? existing?.text ?? 'New text',
-      originalText: canvasObject.originalText ?? existing?.originalText ?? canvasObject.text ?? 'New text',
+      originalText:
+        canvasObject.originalText ?? existing?.originalText ?? canvasObject.text ?? 'New text',
       geometry: {
         x: canvasObject.left ?? existing?.geometry.x ?? 60,
         y: canvasObject.top ?? existing?.geometry.y ?? 60,
@@ -121,7 +186,10 @@ class EditorState {
         fontSize: canvasObject.fontSize ?? existing?.style.fontSize ?? 32,
         fontFamily: canvasObject.fontFamily ?? existing?.style.fontFamily ?? 'Inter',
         color: canvasObject.fill ?? existing?.style.color ?? '#ffffff',
-        bgColor: (canvasObject.backgroundColor as string | null | undefined) ?? existing?.style.bgColor ?? null,
+        bgColor:
+          (canvasObject.backgroundColor as string | null | undefined) ??
+          existing?.style.bgColor ??
+          null,
         bubbleShape: canvasObject.bubbleShape ?? existing?.style.bubbleShape ?? 'rounded',
         lineHeight: canvasObject.lineHeight ?? existing?.style.lineHeight ?? 1.2
       }

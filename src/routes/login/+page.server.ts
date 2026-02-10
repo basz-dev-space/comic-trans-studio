@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { db } from '$lib/server/data';
+import { getRepository } from '$lib/server/repository';
 
 export const load: PageServerLoad = ({ locals }) => {
   if (locals.user) {
@@ -14,13 +14,14 @@ export const actions: Actions = {
     const data = await request.formData();
     const email = String(data.get('email') ?? '');
     const password = String(data.get('password') ?? '');
+    const repo = await getRepository();
 
-    const user = db.findUserByCredentials(email, password);
+    const user = await repo.findUserByCredentials(email, password);
     if (!user) {
       return fail(400, { error: 'Invalid credentials', email });
     }
 
-    const token = db.createSession(user.id);
+    const token = await repo.createSession(user.id);
     cookies.set('session', token, { path: '/', httpOnly: true, sameSite: 'lax' });
     throw redirect(303, '/projects');
   }

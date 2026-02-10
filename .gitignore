@@ -5,4 +5,4 @@ build
 .DS_Store
 .env
 
-/workspaces/comic-trans-studio/prisma/*.db
+prisma/*.db

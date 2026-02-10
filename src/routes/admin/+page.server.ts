@@ -1,6 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db/prisma';
+import { createPrismaRepository } from '$lib/server/repository/prismaRepository';
 import {
   createAdminSession,
   validateAdminSession,
@@ -16,11 +17,17 @@ export const load: PageServerLoad = async ({ cookies }) => {
 
   try {
     const prisma = getPrismaClient();
-    const users = await prisma.user.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: { id: true, email: true, name: true, createdAt: true }
-    });
-    return { admin: true, users };
+    const repository = createPrismaRepository(prisma);
+    const users = await repository.listUsers();
+    return {
+      admin: true,
+      users: users.map((user) => ({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        createdAt: user.createdAt.toISOString()
+      }))
+    };
   } catch (error) {
     console.error('[admin] Failed to load users', error);
     return { admin: true, users: [] };

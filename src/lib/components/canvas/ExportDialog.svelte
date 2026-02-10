@@ -4,7 +4,7 @@
   import Input from '$lib/components/ui/input/input.svelte';
   import Label from '$lib/components/ui/label/label.svelte';
   import { editorStore } from '$lib/stores/editorStore.svelte';
-  import { exportProjectPdf, exportProjectZip } from '$lib/utils/export';
+  import { exportProjectPdf, exportProjectZip, exportProjectPng } from '$lib/utils/export';
   import { notifications } from '$lib/services/notifications';
   import { Download, FileText, Box, Image } from 'lucide-svelte';
 
@@ -28,15 +28,22 @@
   async function handleExport() {
     isExporting = true;
     try {
+      const exportOptions = {
+        fileName,
+        exportRange,
+        exportQuality
+      };
+
       if (exportFormat === 'pdf') {
-        await exportProjectPdf(editorStore);
+        await exportProjectPdf(editorStore, exportOptions);
         notifications.push({ type: 'success', title: 'PDF exported', description: 'Your project has been exported as PDF' });
       } else if (exportFormat === 'zip') {
-        await exportProjectZip(editorStore);
+        await exportProjectZip(editorStore, exportOptions);
         notifications.push({ type: 'success', title: 'ZIP exported', description: 'Your project has been exported as ZIP' });
       } else if (exportFormat === 'png') {
-        await exportProjectPdf(editorStore);
-        notifications.push({ type: 'success', title: 'PNG exported', description: 'Exported as PDF (use ZIP for individual images)' });
+        // Use the proper PNG export function (ZIP of PNG images)
+        await exportProjectPng(editorStore, exportOptions);
+        notifications.push({ type: 'success', title: 'PNG exported', description: 'Individual page images exported as ZIP' });
       }
       onClose();
     } catch (error) {

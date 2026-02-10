@@ -14,6 +14,7 @@
   let bubbleShape = $state<'none' | 'rounded' | 'ellipse'>('rounded');
   let lineHeight = $state(1.2);
   let text = $state('');
+  let lastSelectedBoxId = $state<string | null>(null);
 
   const fontFamilies = [
     { value: 'Inter', label: 'Inter' },
@@ -36,19 +37,32 @@
 
   $effect(() => {
     if (selectedTextBox) {
+      const isNewSelection = lastSelectedBoxId !== selectedTextBox.id;
+      lastSelectedBoxId = selectedTextBox.id;
+
       fontSize = selectedTextBox.style.fontSize;
       fontFamily = selectedTextBox.style.fontFamily;
       textColor = selectedTextBox.style.color;
-      bgColor = selectedTextBox.style.bgColor || 'rgba(15,23,42,0.65)';
+      // Only reset bgColor to default if this is a new text box selection
+      // and the incoming value is null, otherwise preserve current selection
+      if (isNewSelection) {
+        bgColor = selectedTextBox.style.bgColor || 'rgba(15,23,42,0.65)';
+      } else if (selectedTextBox.style.bgColor !== null) {
+        // Update if there's an actual value from the store
+        bgColor = selectedTextBox.style.bgColor;
+      }
       bubbleShape = selectedTextBox.style.bubbleShape;
       lineHeight = selectedTextBox.style.lineHeight;
       text = selectedTextBox.text;
+    } else {
+      lastSelectedBoxId = null;
     }
   });
 
   function updateStyle(updates: Partial<TextBox['style']>) {
     if (!selectedTextBox) return;
-    editorStore.updateTextBox(selectedTextBox.id, { style: { ...selectedTextBox.style, ...updates } });
+    // Pass partial updates directly - the store handles merging safely
+    editorStore.updateTextBox(selectedTextBox.id, { style: updates as TextBox['style'] });
   }
 
   function updateText() {
@@ -58,7 +72,8 @@
 
   function updateGeometry(updates: Partial<TextBox['geometry']>) {
     if (!selectedTextBox) return;
-    editorStore.updateTextBox(selectedTextBox.id, { geometry: { ...selectedTextBox.geometry, ...updates } });
+    // Pass partial updates directly - the store handles merging safely
+    editorStore.updateTextBox(selectedTextBox.id, { geometry: updates as TextBox['geometry'] });
   }
 </script>
 
@@ -121,6 +136,7 @@
         <div class="flex flex-wrap gap-1.5">
           {#each colors as color}
             <button
+              type="button"
               class="h-6 w-6 rounded border border-gray-300 shadow-sm"
               style="background-color: {color}"
               onclick={() => updateStyle({ color })}
@@ -141,6 +157,7 @@
         <label class="block text-xs font-medium text-gray-700 mb-2">Background</label>
         <div class="flex flex-wrap gap-1.5">
           <button
+            type="button"
             class="h-6 w-6 rounded border border-gray-300 shadow-sm"
             style="background: transparent"
             onclick={() => updateStyle({ bgColor: null, bubbleShape: 'none' })}
@@ -152,6 +169,7 @@
           </button>
           {#each colors as color}
             <button
+              type="button"
               class="h-6 w-6 rounded border border-gray-300 shadow-sm"
               style="background-color: {color}"
               onclick={() => updateStyle({ bgColor: color, bubbleShape: 'rounded' })}
@@ -165,18 +183,21 @@
         <label class="block text-xs font-medium text-gray-700 mb-2">Bubble Shape</label>
         <div class="flex gap-2">
           <button
+            type="button"
             class="flex-1 py-1.5 px-3 rounded-lg border text-xs font-medium transition-colors {bubbleShape === 'none' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}"
             onclick={() => updateStyle({ bubbleShape: 'none', bgColor: null })}
           >
             None
           </button>
           <button
+            type="button"
             class="flex-1 py-1.5 px-3 rounded-lg border text-xs font-medium transition-colors {bubbleShape === 'rounded' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}"
             onclick={() => updateStyle({ bubbleShape: 'rounded', bgColor: bgColor || 'rgba(15,23,42,0.65)' })}
           >
             Rounded
           </button>
           <button
+            type="button"
             class="flex-1 py-1.5 px-3 rounded-lg border text-xs font-medium transition-colors {bubbleShape === 'ellipse' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}"
             onclick={() => updateStyle({ bubbleShape: 'ellipse', bgColor: bgColor || 'rgba(15,23,42,0.65)' })}
           >

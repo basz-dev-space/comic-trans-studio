@@ -20,7 +20,7 @@
     const boxes = [...textBoxes];
     if (index > 0) {
       [boxes[index - 1], boxes[index]] = [boxes[index], boxes[index - 1]];
-      editorStore.updatePage(editorStore.pages[currentPageId].id, { textBoxes: boxes } as any);
+      editorStore.updatePage(editorStore.pages[currentPageId].id, { textBoxes: boxes });
     }
   }
 
@@ -28,15 +28,17 @@
     const boxes = [...textBoxes];
     if (index < boxes.length - 1) {
       [boxes[index], boxes[index + 1]] = [boxes[index + 1], boxes[index]];
-      editorStore.updatePage(editorStore.pages[currentPageId].id, { textBoxes: boxes } as any);
+      editorStore.updatePage(editorStore.pages[currentPageId].id, { textBoxes: boxes });
     }
   }
 
   function duplicateLayer(id: string) {
     const box = textBoxes.find(tb => tb.id === id);
     if (box) {
+      // Destructure to exclude id, letting addTextBox generate a new unique id
+      const { id: _, ...boxWithoutId } = box;
       editorStore.addTextBox({
-        ...box,
+        ...boxWithoutId,
         geometry: {
           ...box.geometry,
           x: box.geometry.x + 10,

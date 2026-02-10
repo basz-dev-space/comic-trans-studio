@@ -20,8 +20,9 @@ test.describe('DataGrid', () => {
     await page.click('button:has-text("Add Text")');
 
     const inputs = page.locator('tbody input[type="text"]');
-    await inputs.nth(1).fill('Grid edited');
-    await inputs.nth(1).blur();
+    // Use nth(0) since only one text box was added (index 0, not 1)
+    await inputs.nth(0).fill('Grid edited');
+    await inputs.nth(0).blur();
 
     await expect(page.locator('text=Grid edited')).toBeVisible();
   });

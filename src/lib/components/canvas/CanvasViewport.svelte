@@ -31,6 +31,8 @@
   let stopChangeWatcher: (() => void) | undefined;
   let removeKeyboardHandler: (() => void) | undefined;
   let wrapperResizeObserver: ResizeObserver | undefined;
+  let resizeHandler: (() => void) | undefined;
+  let isInitializing = false;
 
   let hasBackground = $derived(Boolean(currentPage?.imageUrl || currentPage?.inpaintedImageUrl));
   let hasTextLayers = $derived(Boolean(currentPage?.textBoxes?.length));
@@ -214,27 +216,52 @@
       }
     });
 
+    // Initialize canvas if page is already available
     const page = currentPage;
-    if (page) {
+    if (page && !isInitializing) {
+      isInitializing = true;
       (async () => {
         try {
           await manager.init(canvasEl, page);
         } catch (err) {
           notifications.push({ type: 'error', title: 'Canvas initialization failed', description: (err as Error)?.message });
+        } finally {
+          isInitializing = false;
         }
       })();
     }
 
     stopChangeWatcher = editorStore.onChange(() => {
       if (editorStore.activePageId !== pageId) return;
-      renderPage();
+      // Avoid re-rendering if the change originated from canvas interactions
+      if (!isApplyingState) {
+        renderPage();
+      }
     });
 
     removeKeyboardHandler = installKeyboardShortcuts();
-    const onResize = () => computeFitScale();
-    window.addEventListener('resize', onResize);
+    resizeHandler = () => computeFitScale();
+    window.addEventListener('resize', resizeHandler);
     wrapperResizeObserver = new ResizeObserver(() => requestAnimationFrame(computeFitScale));
     wrapperResizeObserver.observe(wrapperEl);
+  });
+
+  // Reactive effect to initialize canvas when currentPage becomes available
+  $effect(() => {
+    const page = currentPage;
+    if (page && manager && !manager.getCanvas() && !isInitializing) {
+      isInitializing = true;
+      (async () => {
+        try {
+          await manager.init(canvasEl, page);
+          computeFitScale();
+        } catch (err) {
+          notifications.push({ type: 'error', title: 'Canvas initialization failed', description: (err as Error)?.message });
+        } finally {
+          isInitializing = false;
+        }
+      })();
+    }
   });
 
   $effect(() => {
@@ -251,6 +278,10 @@
     stopChangeWatcher?.();
     removeKeyboardHandler?.();
     wrapperResizeObserver?.disconnect();
+    // Remove resize event listener to prevent memory leak
+    if (resizeHandler) {
+      window.removeEventListener('resize', resizeHandler);
+    }
     manager?.dispose();
   });
 </script>

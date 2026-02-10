@@ -9,7 +9,7 @@
     disabled?: boolean;
     title?: string;
     children: Snippet;
-    onclick?: () => void;
+    onclick?: (event: MouseEvent) => void;
   }
 
   let {

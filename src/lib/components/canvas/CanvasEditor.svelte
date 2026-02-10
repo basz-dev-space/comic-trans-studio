@@ -1,17 +1,14 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { CanvasManager } from '$lib/canvas/CanvasManager';
-  import { editorStore, type TextBox } from '$lib/stores/editorStore.svelte';
+  import { editorStore } from '$lib/stores/editorStore.svelte';
   import { notifications } from '$lib/services/notifications';
-  import Toolbar from './Toolbar.svelte';
-  import PagePanel from './PagePanel.svelte';
-  import RightPanel from './RightPanel.svelte';
-  import ExportDialog from './ExportDialog.svelte';
-  import PageDialog from './PageDialog.svelte';
-  import { compressImage, fileToDataUrl } from '$lib/utils/image';
-  import { translatePageText } from '$lib/services/translate';
-  import { inpaintPage } from '$lib/services/inpaint';
-  import { ArrowLeft } from 'lucide-svelte';
+  import { locale, t } from '$lib/i18n';
+  import { ArrowLeft, ImagePlus, Type, FileText, Box, ChevronUp, ChevronDown, Plus, Trash2 } from 'lucide-svelte';
+  import { Button } from '$lib/components/ui/button';
+  import Editor from '$lib/components/Editor.svelte';
+  import DataGrid from '$lib/components/DataGrid.svelte';
+  import PropertiesPanel from '$lib/components/canvas/PropertiesPanel.svelte';
+  import { exportProjectPdf, exportProjectZip } from '$lib/utils/export';
 
   interface Props {
     projectId?: string;
@@ -19,419 +16,270 @@
     chapterName?: string;
   }
 
-  let { projectId = '', chapterId: _chapterId = '', chapterName = 'Untitled Chapter' }: Props = $props();
+  let { projectId = '', chapterId = '', chapterName = 'Untitled Chapter' }: Props = $props();
 
-  let canvasEl: HTMLCanvasElement;
-  let wrapperEl: HTMLDivElement;
-  let fileInputEl: HTMLInputElement;
-  let manager: CanvasManager;
+  let currentPageId = $state(0);
+  let activeBottomTab: 'properties' | 'datagrid' = $state('datagrid');
+  let showPagesPanel = $state(true);
+  let showCanvasPanel = $state(true);
+  let showBottomPanel = $state(true);
+  let leftPanelWidth = $state(210);
+  
+  const minLeft = 160;
+  const maxLeft = 300;
 
-  let currentPage = $derived(editorStore.pages[editorStore.activePageId]);
-  let hasBackground = $derived(Boolean(currentPage?.imageUrl || currentPage?.inpaintedImageUrl));
-  let hasTextLayers = $derived(Boolean(currentPage?.textBoxes?.length));
-  let showCanvasEmptyState = $derived(!hasBackground && !hasTextLayers);
+  let selectedTextBox = $derived(
+    editorStore.selectedTextBoxId 
+      ? editorStore.getTextBox(editorStore.selectedTextBoxId) 
+      : null
+  );
 
-  let selectedTextBox = $state<TextBox | null>(null);
-  let isTranslating = $state(false);
-  let isCleaning = $state(false);
-  let isUploading = $state(false);
-  let isEditingText = $state(false);
-  let zoomPercent = $state(100);
-  let showExportDialog = $state(false);
-  let showPageDialog = $state(false);
-  let showShortcutsDialog = $state(false);
-
-  let stopChangeWatcher: (() => void) | undefined;
-  let removeKeyboardHandler: (() => void) | undefined;
-  let wrapperResizeObserver: ResizeObserver | undefined;
-
+  // Subscribe to store changes
   $effect(() => {
-    if (editorStore) {
-      renderPage();
-    }
+    currentPageId = editorStore.activePageId;
   });
 
-  $effect(() => {
-    const unsubscribe = editorStore.onChange(() => {
-      const active = editorStore.getTextBox(editorStore.selectedTextBoxId || '');
-      selectedTextBox = active || null;
-    });
-    return unsubscribe;
-  });
+  const createPage = () => {
+    editorStore.addPage();
+  };
 
-  async function renderPage() {
-    const page = currentPage;
-    if (!page || !manager) return;
-    await manager.render(page);
-    computeFitScale();
-  }
-
-  function computeFitScale() {
-    const page = currentPage;
-    if (!page || !wrapperEl) return;
-
-    const padding = 40;
-    const availW = Math.max(200, wrapperEl.clientWidth - padding);
-    const availH = Math.max(200, wrapperEl.clientHeight - padding);
-    const scale = Math.max(0.1, Math.min(availW / page.width, availH / page.height));
-
-    zoomPercent = Math.round(scale * 100);
-    manager.setZoom(scale);
-  }
-
-  function addTextLayer() {
-    editorStore.addTextBox({
-      text: 'Double-click to edit',
-      originalText: 'Double-click to edit',
-      geometry: { x: 100, y: 100, w: 300, h: 60, rotation: 0 },
-      style: { fontSize: 28, fontFamily: 'Inter', color: '#ffffff', bgColor: 'rgba(15,23,42,0.65)', bubbleShape: 'rounded', lineHeight: 1.2 }
-    });
-    notifications.push({ type: 'success', title: 'Text added', description: 'Click to select, drag to move' });
-  }
-
-  function addShapeLayer() {
-    editorStore.addTextBox({
-      text: 'Speech Bubble',
-      originalText: 'Speech Bubble',
-      geometry: { x: 150, y: 150, w: 280, h: 80, rotation: 0 },
-      style: { fontSize: 24, fontFamily: 'Inter', color: '#ffffff', bgColor: 'rgba(99, 102, 241, 0.7)', bubbleShape: 'ellipse', lineHeight: 1.2 }
-    });
-    notifications.push({ type: 'success', title: 'Bubble added', description: 'Select and resize as needed' });
-  }
-
-  function deleteSelection() {
-    if (editorStore.selectedTextBoxId) {
-      editorStore.removeTextBox(editorStore.selectedTextBoxId);
-      editorStore.selectTextBox(null);
-      selectedTextBox = null;
-      notifications.push({ type: 'success', title: 'Deleted', description: 'Text box removed' });
-    }
-  }
-
-  async function handleUpload(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-
-    isUploading = true;
-    try {
-      const src = await fileToDataUrl(file);
-      const { compressed, originalWidth, originalHeight } = await compressImage(src);
-
-      editorStore.addPage({
-        name: file.name.replace(/\.[^/.]+$/, ''),
-        width: originalWidth,
-        height: originalHeight,
-        imageUrl: compressed
-      });
-
-      notifications.push({ type: 'success', title: 'Page added', description: `${originalWidth}x${originalHeight}px` });
-    } catch (error) {
-      notifications.push({ type: 'error', title: 'Upload failed', description: (error as Error).message });
-    } finally {
-      isUploading = false;
-      if (fileInputEl) fileInputEl.value = '';
-    }
-  }
-
-  async function handleTranslate() {
-    const page = currentPage;
-    if (!page || !page.textBoxes?.length) {
-      notifications.push({ type: 'info', title: 'No text', description: 'Add text layers first' });
+  const deletePage = (pageId: string) => {
+    if (editorStore.pages.length <= 1) {
+      notifications.push({ type: 'info', title: 'Cannot delete', description: 'At least one page is required' });
       return;
     }
+    editorStore.deletePage(pageId);
+  };
 
-    isTranslating = true;
-    try {
-      const translated = await translatePageText(page.textBoxes.map(tb => ({ id: tb.id, originalText: tb.originalText })));
-      editorStore.batchUpdateTextBoxes(translated);
-      notifications.push({ type: 'success', title: 'Translated', description: `${translated.length} text boxes updated` });
-    } catch (error) {
-      notifications.push({ type: 'error', title: 'Translation failed', description: (error as Error).message });
-    } finally {
-      isTranslating = false;
+  const movePage = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' 
+      ? Math.max(0, index - 1) 
+      : Math.min(editorStore.pages.length - 1, index + 1);
+    if (newIndex !== index) {
+      editorStore.movePage(index, newIndex);
     }
-  }
+  };
 
-  async function handleClean() {
-    const page = currentPage;
-    if (!page?.imageUrl) {
-      notifications.push({ type: 'info', title: 'No image', description: 'Upload a page image first' });
-      return;
+  const togglePanel = (panel: 'pages' | 'canvas' | 'bottom') => {
+    if (panel === 'pages') showPagesPanel = !showPagesPanel;
+    if (panel === 'canvas') showCanvasPanel = !showCanvasPanel;
+    if (panel === 'bottom') showBottomPanel = !showBottomPanel;
+
+    if (!showPagesPanel && !showCanvasPanel) {
+      showCanvasPanel = true;
+      notifications.push({ type: 'info', title: 'Canvas kept open', description: 'At least one top panel stays visible.', timeoutMs: 1800 });
     }
+  };
 
-    isCleaning = true;
-    try {
-      const resultUrl = await inpaintPage(page.imageUrl, page.textBoxes);
-      if (resultUrl && resultUrl !== page.imageUrl) {
-        editorStore.updatePage(page.id, { inpaintedImageUrl: resultUrl });
-        notifications.push({ type: 'success', title: 'Cleaned', description: 'Background cleaned successfully' });
-      } else {
-        notifications.push({ type: 'info', title: 'No changes', description: 'Background unchanged' });
-      }
-    } catch (error) {
-      notifications.push({ type: 'error', title: 'Clean failed', description: (error as Error).message });
-    } finally {
-      isCleaning = false;
-    }
-  }
+  let detachResizeListeners: (() => void) | undefined;
 
-  function handleZoomIn() {
-    manager.zoomIn();
-    zoomPercent = Math.round(manager.getZoom() * 100);
-  }
+  const dragResize = (event: MouseEvent) => {
+    event.preventDefault();
+    detachResizeListeners?.();
+    const startX = event.clientX;
+    const initialLeft = leftPanelWidth;
 
-  function handleZoomOut() {
-    manager.zoomOut();
-    zoomPercent = Math.round(manager.getZoom() * 100);
-  }
-
-  function handleZoomReset() {
-    const page = currentPage;
-    if (!page || !wrapperEl) return;
-    const scale = manager.zoomToFit(page.width, page.height, wrapperEl.clientWidth, wrapperEl.clientHeight);
-    zoomPercent = Math.round(scale * 100);
-  }
-
-  function handleUndo() {
-    editorStore.undo();
-    setTimeout(renderPage, 50);
-  }
-
-  function handleRedo() {
-    editorStore.redo();
-    setTimeout(renderPage, 50);
-  }
-
-  function installKeyboardShortcuts() {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.target as HTMLElement)?.tagName === 'INPUT' || (event.target as HTMLElement)?.tagName === 'TEXTAREA') return;
-
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
-        event.preventDefault();
-        if (event.shiftKey) {
-          handleRedo();
-        } else {
-          handleUndo();
-        }
-        return;
-      }
-
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
-        event.preventDefault();
-        notifications.push({ type: 'info', title: 'Auto-save', description: 'Changes are saved automatically' });
-        return;
-      }
-
-      if (event.key.toLowerCase() === 't' && !event.ctrlKey && !event.metaKey) {
-        event.preventDefault();
-        addTextLayer();
-        return;
-      }
-
-      if (event.key.toLowerCase() === 'b' && !event.ctrlKey && !event.metaKey) {
-        event.preventDefault();
-        addShapeLayer();
-        return;
-      }
-
-      if (event.key === '+' || event.key === '=') {
-        event.preventDefault();
-        handleZoomIn();
-        return;
-      }
-
-      if (event.key === '-' || event.key === '_') {
-        event.preventDefault();
-        handleZoomOut();
-        return;
-      }
-
-      if (event.key === '0') {
-        event.preventDefault();
-        handleZoomReset();
-        return;
-      }
-
-      if (event.key === 'Delete' || event.key === 'Backspace') {
-        if (!isEditingText) {
-          event.preventDefault();
-          deleteSelection();
-        }
-        return;
-      }
-
-      if (event.key === 'Escape') {
-        editorStore.selectTextBox(null);
-        selectedTextBox = null;
-        return;
-      }
+    const onMove = (moveEvent: MouseEvent) => {
+      leftPanelWidth = Math.min(maxLeft, Math.max(minLeft, initialLeft + (moveEvent.clientX - startX)));
     };
 
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }
+    const onUp = () => detachResizeListeners?.();
 
-  onMount(() => {
-    const managerInstance = new CanvasManager({
-      onObjectsChanged: () => {},
-      onSelectionChanged: (id) => {
-        editorStore.selectTextBox(id);
-        selectedTextBox = editorStore.getTextBox(id || '') || null;
-      },
-      onCanvasReady: () => {},
-      onTextEditing: (editing: boolean) => {
-        isEditingText = editing;
-      }
-    });
-    manager = managerInstance;
+    detachResizeListeners = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      detachResizeListeners = undefined;
+    };
 
-    if (currentPage) {
-      (async () => {
-        try {
-          await manager.init(canvasEl, currentPage);
-          computeFitScale();
-        } catch (err) {
-          notifications.push({ type: 'error', title: 'Canvas failed', description: (err as Error).message });
-        }
-      })();
-    }
-
-    removeKeyboardHandler = installKeyboardShortcuts();
-    const onResize = () => computeFitScale();
-    window.addEventListener('resize', onResize);
-    wrapperResizeObserver = new ResizeObserver(() => requestAnimationFrame(computeFitScale));
-    wrapperResizeObserver.observe(wrapperEl);
-  });
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
 
   onDestroy(() => {
-    stopChangeWatcher?.();
-    removeKeyboardHandler?.();
-    wrapperResizeObserver?.disconnect();
-    manager?.dispose();
+    detachResizeListeners?.();
   });
-
-  const shortcuts = [
-    { keys: 'T', action: 'Add text' },
-    { keys: 'B', action: 'Add bubble' },
-    { keys: 'Delete', action: 'Delete selected' },
-    { keys: 'Ctrl+Z', action: 'Undo' },
-    { keys: 'Ctrl+Shift+Z', action: 'Redo' },
-    { keys: '+ / -', action: 'Zoom in/out' },
-    { keys: '0', action: 'Reset zoom' },
-    { keys: 'Esc', action: 'Deselect' }
-  ];
 </script>
 
-<div class="flex h-full flex-col bg-gray-50">
-  <header class="flex items-center justify-between bg-white px-4 py-2 border-b border-gray-200">
+<div class="flex h-full flex-col bg-[#f3f5f8]">
+  <!-- Header -->
+  <header class="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-2">
     <div class="flex items-center gap-3">
       <a href={`/project/${projectId}`} class="flex items-center gap-2 text-gray-600 hover:text-gray-900">
         <ArrowLeft class="h-5 w-5" />
       </a>
       <h1 class="text-lg font-semibold text-gray-900">{chapterName}</h1>
     </div>
-    <div class="flex items-center gap-2">
-      <span class="text-xs text-gray-500">
+    <div class="flex items-center gap-2 text-xs">
+      <span class="rounded bg-gray-100 px-2 py-1 text-gray-600">
         {editorStore.pages.length} page{editorStore.pages.length !== 1 ? 's' : ''}
       </span>
     </div>
   </header>
 
-  <Toolbar
-    canUndo={editorStore.canUndo()}
-    canRedo={editorStore.canRedo()}
-    {isTranslating}
-    {isCleaning}
-    {isUploading}
-    {zoomPercent}
-    on:undo={handleUndo}
-    on:redo={handleRedo}
-    on:addText={addTextLayer}
-    on:addBubble={addShapeLayer}
-    on:translate={handleTranslate}
-    on:clean={handleClean}
-    on:upload={() => fileInputEl?.click()}
-    on:delete={deleteSelection}
-    on:zoomIn={handleZoomIn}
-    on:zoomOut={handleZoomOut}
-    on:zoomReset={handleZoomReset}
-    on:export={() => showExportDialog = true}
-    on:showShortcuts={() => showShortcutsDialog = true}
-  />
-
-  <div class="flex flex-1 overflow-hidden">
-    <aside class="w-64 flex-shrink-0 border-r border-gray-200 bg-white">
-      <PagePanel />
-    </aside>
-
-    <main class="flex-1 overflow-hidden bg-gray-100 p-4">
-      <div
-        bind:this={wrapperEl}
-        class="flex h-full items-center justify-center overflow-auto rounded-lg bg-white shadow-sm"
-      >
-        <div class="relative" style="background-color: #f8f9fa; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-          <canvas bind:this={canvasEl}></canvas>
-
-          {#if showCanvasEmptyState}
-            <div class="absolute inset-0 flex items-center justify-center bg-white/90">
-              <div class="text-center">
-                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <h3 class="mt-2 text-sm font-medium text-gray-900">Start creating</h3>
-                <p class="mt-1 text-sm text-gray-500">Upload an image or add text</p>
-                <div class="mt-4 flex justify-center gap-2">
-                  <button
-                    class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-                    onclick={() => fileInputEl?.click()}
-                  >
-                    Upload Image
-                  </button>
-                  <button
-                    class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    onclick={addTextLayer}
-                  >
-                    Add Text
-                  </button>
-                </div>
-              </div>
-            </div>
-          {/if}
-        </div>
+  <!-- Toolbar -->
+  <div class="border-b border-gray-200 bg-[#eef1f5] px-3 py-2">
+    <div class="flex flex-wrap items-center gap-2">
+      <Button onclick={createPage} className="h-8 rounded bg-white px-3 text-xs font-semibold text-gray-700">
+        <Plus class="mr-1 h-3.5 w-3.5" /> {t($locale, 'chapter.newPage')}
+      </Button>
+      
+      <div class="ml-auto flex gap-2">
+        <Button variant="outline" onclick={() => exportProjectZip(editorStore)} className="h-8 rounded bg-white px-3 text-xs font-semibold text-gray-700">
+          <Box class="mr-1 h-3.5 w-3.5" /> {t($locale, 'chapter.exportZip')}
+        </Button>
+        <Button variant="outline" onclick={() => exportProjectPdf(editorStore)} className="h-8 rounded bg-white px-3 text-xs font-semibold text-gray-700">
+          <FileText class="mr-1 h-3.5 w-3.5" /> {t($locale, 'chapter.exportPdf')}
+        </Button>
       </div>
-    </main>
-
-    <aside class="w-80 flex-shrink-0 border-l border-gray-200 bg-white overflow-hidden">
-      <RightPanel selectedTextBox={selectedTextBox} />
-    </aside>
+    </div>
   </div>
-</div>
 
-<input bind:this={fileInputEl} type="file" class="hidden" accept="image/*" onchange={handleUpload} />
-
-<ExportDialog bind:open={showExportDialog} onClose={() => showExportDialog = false} />
-<PageDialog bind:open={showPageDialog} onClose={() => showPageDialog = false} />
-
-{#if showShortcutsDialog}
-  <div class="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
-    <div class="fixed inset-0 bg-black/50" onclick={() => showShortcutsDialog = false} role="presentation"></div>
-    <div class="relative z-50 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-      <h2 class="text-lg font-semibold text-gray-900">Keyboard Shortcuts</h2>
-      <p class="mt-1 text-sm text-gray-500">Work faster with keyboard shortcuts</p>
-      <div class="mt-4 space-y-2">
-        {#each shortcuts as shortcut}
-          <div class="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-2">
-            <span class="text-sm text-gray-700">{shortcut.action}</span>
-            <kbd class="rounded bg-white px-2 py-1 text-xs font-mono text-gray-600 shadow-sm">{shortcut.keys}</kbd>
-          </div>
-        {/each}
-      </div>
-      <button
-        class="mt-6 w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-        onclick={() => showShortcutsDialog = false}
+  <!-- Panel Toggles -->
+  <div class="border-b border-gray-200 bg-white px-3 py-2">
+    <div class="flex flex-wrap gap-2">
+      <button 
+        class="inline-flex items-center gap-1 rounded bg-gray-50 px-2.5 py-1 text-xs hover:bg-gray-100"
+        onclick={() => togglePanel('pages')}
       >
-        Close
+        {#if showPagesPanel}
+          <ChevronUp class="h-3 w-3" /> Hide pages
+        {:else}
+          <ChevronDown class="h-3 w-3" /> Show pages
+        {/if}
+      </button>
+      <button 
+        class="inline-flex items-center gap-1 rounded bg-gray-50 px-2.5 py-1 text-xs hover:bg-gray-100"
+        onclick={() => togglePanel('canvas')}
+      >
+        {#if showCanvasPanel}
+          <ChevronUp class="h-3 w-3" /> Hide canvas
+        {:else}
+          <ChevronDown class="h-3 w-3" /> Show canvas
+        {/if}
+      </button>
+      <button 
+        class="inline-flex items-center gap-1 rounded bg-gray-50 px-2.5 py-1 text-xs hover:bg-gray-100"
+        onclick={() => togglePanel('bottom')}
+      >
+        {#if showBottomPanel}
+          <ChevronUp class="h-3 w-3" /> Hide datagrid
+        {:else}
+          <ChevronDown class="h-3 w-3" /> Show datagrid
+        {/if}
       </button>
     </div>
   </div>
-{/if}
+
+  <!-- Main Content Area -->
+  <div class="flex flex-1 gap-0 overflow-hidden bg-[#eef1f5]">
+    <!-- Pages Panel -->
+    {#if showPagesPanel}
+      <aside 
+        class="flex flex-col overflow-hidden bg-[#eef1f5]"
+        style={`width:${leftPanelWidth}px; flex-shrink: 0;`}
+      >
+        <div class="border-b border-[#d9dde3] p-3 text-sm font-semibold text-[#2f343b]">
+          Pages
+        </div>
+        <div class="flex-1 space-y-1 overflow-y-auto p-2">
+          {#each editorStore.pages as page, index (page.id)}
+            <div class="flex w-full items-center justify-between rounded px-2 py-2 text-sm">
+              <button 
+                class={`flex flex-1 items-center gap-2 text-left ${currentPageId === index ? 'bg-white font-semibold text-[#21242a] shadow-sm' : 'text-[#555b66] hover:bg-[#f8f9fb]'}`}
+                onclick={() => editorStore.activePageId = index}
+              >
+                <span class="h-5 w-5 rounded bg-white text-center text-xs leading-5">{index + 1}</span>
+                <span class="truncate">{page.name}</span>
+              </button>
+              <div class="ml-2 flex items-center gap-1">
+                <button 
+                  class="rounded p-1 hover:bg-white disabled:opacity-30" 
+                  onclick={() => movePage(index, 'up')}
+                  disabled={index === 0}
+                  aria-label="Move up"
+                >
+                  <ChevronUp class="h-3 w-3" />
+                </button>
+                <button 
+                  class="rounded p-1 hover:bg-white disabled:opacity-30" 
+                  onclick={() => movePage(index, 'down')}
+                  disabled={index === editorStore.pages.length - 1}
+                  aria-label="Move down"
+                >
+                  <ChevronDown class="h-3 w-3" />
+                </button>
+                <button 
+                  class="rounded p-1 text-red-500 hover:bg-red-50"
+                  onclick={() => deletePage(page.id)}
+                  aria-label="Delete page"
+                >
+                  <Trash2 class="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </aside>
+    {/if}
+
+    <!-- Resize Handle -->
+    {#if showPagesPanel && showCanvasPanel}
+      <button 
+        class="flex w-2 cursor-col-resize items-center justify-center bg-[#d9dde3] hover:bg-[#c9ced7]"
+        onmousedown={dragResize}
+        aria-label="Resize pages panel"
+      >
+        <div class="h-full w-0.5 bg-[#c9ced7]"></div>
+      </button>
+    {/if}
+
+    <!-- Canvas Area -->
+    {#if showCanvasPanel}
+      <section class="flex flex-1 flex-col overflow-hidden bg-[#ebedf1] p-4">
+        <Editor store={editorStore} pageId={currentPageId} />
+      </section>
+    {/if}
+  </div>
+
+  <!-- Bottom Panel (DataGrid) -->
+  {#if showBottomPanel}
+    <section class="border-t border-gray-200 bg-[#f1f3f7]">
+      <!-- Tabs -->
+      <div class="flex border-b border-gray-200 bg-[#e9edf2] px-3">
+        <button 
+          class={`px-4 py-2 text-sm font-semibold transition-colors ${activeBottomTab === 'properties' ? 'border-b-2 border-indigo-500 bg-white text-indigo-700' : 'text-gray-600 hover:text-gray-800'}`}
+          onclick={() => (activeBottomTab = 'properties')}
+        >
+          Properties
+        </button>
+        <button 
+          class={`px-4 py-2 text-sm font-semibold transition-colors ${activeBottomTab === 'datagrid' ? 'border-b-2 border-indigo-500 bg-white text-indigo-700' : 'text-gray-600 hover:text-gray-800'}`}
+          onclick={() => (activeBottomTab = 'datagrid')}
+        >
+          DataGrid
+        </button>
+      </div>
+      
+      <!-- Content -->
+      <div class="h-[280px]">
+        {#if activeBottomTab === 'properties'}
+          <div class="h-full overflow-auto bg-white p-4">
+            {#if selectedTextBox}
+              <PropertiesPanel {selectedTextBox} />
+            {:else}
+              <div class="flex h-full items-center justify-center text-sm text-gray-500">
+                <div class="text-center">
+                  <Type class="mx-auto mb-2 h-8 w-8 text-gray-300" />
+                  <p class="font-semibold text-gray-700">No text box selected</p>
+                  <p class="mt-1">Click on a text box in the canvas to edit its properties</p>
+                </div>
+              </div>
+            {/if}
+          </div>
+        {:else}
+          <DataGrid store={editorStore} pageId={currentPageId} />
+        {/if}
+      </div>
+    </section>
+  {/if}
+</div>

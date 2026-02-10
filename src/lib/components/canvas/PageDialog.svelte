@@ -27,14 +27,21 @@
   let isEditing = $derived(editPageId !== null);
   let existingPage = $derived(isEditing ? editorStore.pages.find(p => p.id === editPageId) : null);
 
+  // Reset form state when dialog opens or edit mode changes
   $effect(() => {
-    if (isEditing && existingPage) {
-      name = existingPage.name;
-      width = existingPage.width;
-      height = existingPage.height;
-      imageUrl = existingPage.imageUrl || null;
-    } else {
-      name = `Page ${editorStore.pages.length + 1}`;
+    if (open) {
+      if (isEditing && existingPage) {
+        name = existingPage.name;
+        width = existingPage.width;
+        height = existingPage.height;
+        imageUrl = existingPage.imageUrl || null;
+      } else {
+        name = `Page ${editorStore.pages.length + 1}`;
+        width = 900;
+        height = 1200;
+        imageUrl = null;
+      }
+      activeTab = 'settings';
     }
   });
 
@@ -56,6 +63,13 @@
 
     if (!file.type.startsWith('image/')) {
       notifications.push({ type: 'error', title: 'Invalid file', description: 'Please select an image file' });
+      return;
+    }
+
+    // Enforce 10MB file size limit as indicated in UI
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      notifications.push({ type: 'error', title: 'File too large', description: 'Maximum file size is 10MB' });
       return;
     }
 
@@ -88,6 +102,13 @@
       return;
     }
 
+    // Validate maximum dimensions as indicated in UI (5000px)
+    const maxDimension = 5000;
+    if (width > maxDimension || height > maxDimension) {
+      notifications.push({ type: 'error', title: 'Invalid dimensions', description: `Width and height must not exceed ${maxDimension}px` });
+      return;
+    }
+
     if (isEditing && editPageId) {
       editorStore.updatePage(editPageId, { name, width, height, imageUrl: imageUrl || undefined });
       notifications.push({ type: 'success', title: 'Page updated', description: `${name} has been updated` });
@@ -100,12 +121,9 @@
   }
 
   function resetAndClose() {
-    name = '';
-    width = 900;
-    height = 1200;
-    imageUrl = null;
-    editPageId = null;
-    activeTab = 'settings';
+    // Note: editPageId is a read-only prop in Svelte 5.
+    // The parent component is responsible for resetting it via binding or state management.
+    // We only reset local state and close the dialog.
     onClose();
   }
 

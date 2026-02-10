@@ -1,4 +1,4 @@
-import { Canvas, FabricImage, IText, Rect, FabricObject } from 'fabric';
+import { Canvas, FabricImage, IText, Rect, Point } from 'fabric';
 import type { PageData, TextBox } from '$lib/schemas/editor';
 import { editorStore } from '$lib/stores/editorStore.svelte';
 
@@ -79,7 +79,7 @@ export class CanvasManager {
       const deltaX = e.clientX - this.lastPanPosition.x;
       const deltaY = e.clientY - this.lastPanPosition.y;
 
-      this.canvas!.relativePan(new (FabricObject as any)(deltaX, deltaY));
+      this.canvas!.relativePan(new Point(deltaX, deltaY));
       this.lastPanPosition = { x: e.clientX, y: e.clientY };
     });
 
@@ -96,7 +96,7 @@ export class CanvasManager {
         e.stopPropagation();
         const deltaX = e.deltaX || 0;
         const deltaY = e.deltaY || 0;
-        this.canvas!.relativePan(new (FabricObject as any)(deltaX, deltaY));
+        this.canvas!.relativePan(new Point(deltaX, deltaY));
         return;
       }
 
@@ -182,7 +182,7 @@ export class CanvasManager {
     this.handlers.onSelectionChanged?.(id);
   }
 
-  private syncObjectToStore(obj: FabricObject): void {
+  private syncObjectToStore(obj: any): void {
     const id = (obj as any).data?.id;
     if (!id || this.syncInProgress || this.isDisposing) return;
 

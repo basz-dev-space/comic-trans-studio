@@ -16,7 +16,7 @@
   let loginPassword = '';
   let showCreateSuccess = false;
 
-  $: if (form?.success) {
+  $: if (form?.success && form?.form) {
     showCreateSuccess = true;
     createUserEmail = '';
     createUserName = '';
@@ -97,7 +97,7 @@
 
               {#if showCreateSuccess}
                 <div class="mb-4 flex items-center gap-2 rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700">
-                  <span>{t($locale, 'chapter.saveSuccess')}</span>
+                  <span>{t($locale, 'admin.createSuccess')}</span>
                 </div>
               {/if}
 

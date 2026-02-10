@@ -5,7 +5,8 @@ const mapUser = (row: any): User => ({
   id: row.id,
   email: row.email,
   password: row.passwordHash,
-  name: row.name
+  name: row.name,
+  createdAt: row.createdAt
 });
 
 const mapProject = (row: any): Project => ({
@@ -69,7 +70,11 @@ export const createPrismaRepository = (prisma: any): Repository => ({
     return session?.user ? mapUser(session.user) : null;
   },
   async getProjectsByOwner(ownerId) {
-    const rows = await prisma.project.findMany({ where: { ownerId }, include: { chapters: true }, orderBy: { updatedAt: 'desc' } });
+    const rows = await prisma.project.findMany({
+      where: { ownerId },
+      include: { chapters: true },
+      orderBy: { updatedAt: 'desc' }
+    });
     return rows.map(mapProject);
   },
   async createProject(ownerId, name) {
@@ -90,7 +95,10 @@ export const createPrismaRepository = (prisma: any): Repository => ({
     return mapProject(project);
   },
   async getProjectById(projectId) {
-    const project = await prisma.project.findUnique({ where: { id: projectId }, include: { chapters: true } });
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: { chapters: true }
+    });
     return project ? mapProject(project) : null;
   },
   async getChaptersByProject(projectId) {
@@ -102,7 +110,10 @@ export const createPrismaRepository = (prisma: any): Repository => ({
     return chapters.map(mapChapter);
   },
   async createChapter(projectId, name) {
-    const maxOrder = await prisma.chapter.aggregate({ where: { projectId }, _max: { orderIndex: true } });
+    const maxOrder = await prisma.chapter.aggregate({
+      where: { projectId },
+      _max: { orderIndex: true }
+    });
     const orderIndex = (maxOrder._max.orderIndex ?? -1) + 1;
     const chapter = await prisma.chapter.create({
       data: {
@@ -116,7 +127,13 @@ export const createPrismaRepository = (prisma: any): Repository => ({
     return mapChapter(chapter);
   },
   async renameChapter(chapterId, name) {
-    const chapter = await prisma.chapter.update({ where: { id: chapterId }, data: { name }, include: { pages: { include: { textBoxes: true } } } }).catch(() => null);
+    const chapter = await prisma.chapter
+      .update({
+        where: { id: chapterId },
+        data: { name },
+        include: { pages: { include: { textBoxes: true } } }
+      })
+      .catch(() => null);
     return chapter ? mapChapter(chapter) : null;
   },
   async deleteChapter(chapterId) {
@@ -145,7 +162,10 @@ export const createPrismaRepository = (prisma: any): Repository => ({
 
       // Move existing pages to a high offset to avoid per-statement unique collisions
       for (const existing of existingPages) {
-        await tx.page.update({ where: { id: existing.id }, data: { orderIndex: existing.orderIndex + OFFSET } });
+        await tx.page.update({
+          where: { id: existing.id },
+          data: { orderIndex: existing.orderIndex + OFFSET }
+        });
       }
 
       // Delete pages that are no longer present
@@ -211,10 +231,17 @@ export const createPrismaRepository = (prisma: any): Repository => ({
     });
 
     return refreshed ? mapChapter(refreshed) : null;
-  }
-,
+  },
   async listUsers() {
-    const rows = await prisma.user.findMany({ select: { id: true, email: true, name: true, passwordHash: true, createdAt: true } });
-    return rows.map(mapUser);
+    const rows = await prisma.user.findMany({
+      select: { id: true, email: true, name: true, createdAt: true }
+    });
+    return rows.map((row: any) => ({
+      id: row.id,
+      email: row.email,
+      name: row.name,
+      createdAt: row.createdAt,
+      password: ''
+    }));
   }
 });

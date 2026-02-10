@@ -217,7 +217,12 @@ function createEditorStore() {
 
       project.pages.splice(pageIndex, 1);
 
-      if (project.activePageId >= project.pages.length) {
+      // Adjust activePageId when a preceding page is deleted or when it's now out of bounds
+      if (project.activePageId > pageIndex) {
+        // A page before the current active page was deleted, shift active index down
+        project.activePageId -= 1;
+      } else if (project.activePageId >= project.pages.length) {
+        // Active page was at the end and got deleted, move to new last page
         project.activePageId = project.pages.length - 1;
       }
 

@@ -23,6 +23,8 @@ export const POST: RequestHandler = async ({ request }) => {
     return json({ translations });
   } catch (err: any) {
     console.error('Translation API error:', err);
+    // Re-throw SvelteKit HttpError instances to preserve status code
+    if (err.status) throw err;
     throw error(500, { message: err.message || 'Translation failed' });
   }
 };

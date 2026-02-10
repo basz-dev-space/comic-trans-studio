@@ -110,19 +110,21 @@ export const createPrismaRepository = (prisma: any): Repository => ({
     return chapters.map(mapChapter);
   },
   async createChapter(projectId, name) {
-    const maxOrder = await prisma.chapter.aggregate({
-      where: { projectId },
-      _max: { orderIndex: true }
-    });
-    const orderIndex = (maxOrder._max.orderIndex ?? -1) + 1;
-    const chapter = await prisma.chapter.create({
-      data: {
-        projectId,
-        name,
-        orderIndex,
-        pages: { create: { name: 'Page 1', width: 900, height: 1200, orderIndex: 0 } }
-      },
-      include: { pages: { include: { textBoxes: true } } }
+    const chapter = await prisma.$transaction(async (tx: any) => {
+      const maxOrder = await tx.chapter.aggregate({
+        where: { projectId },
+        _max: { orderIndex: true }
+      });
+      const orderIndex = (maxOrder._max.orderIndex ?? -1) + 1;
+      return tx.chapter.create({
+        data: {
+          projectId,
+          name,
+          orderIndex,
+          pages: { create: { name: 'Page 1', width: 900, height: 1200, orderIndex: 0 } }
+        },
+        include: { pages: { include: { textBoxes: true } } }
+      });
     });
     return mapChapter(chapter);
   },
@@ -234,7 +236,8 @@ export const createPrismaRepository = (prisma: any): Repository => ({
   },
   async listUsers() {
     const rows = await prisma.user.findMany({
-      select: { id: true, email: true, name: true, createdAt: true }
+      select: { id: true, email: true, name: true, createdAt: true },
+      orderBy: { createdAt: 'desc' }
     });
     return rows.map((row: any) => ({
       id: row.id,

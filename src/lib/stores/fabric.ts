@@ -1,14 +1,23 @@
 import { editorStore, type ProjectData } from './editorStore.svelte';
-import { writable, derived } from 'svelte/store';
+import { writable } from 'svelte/store';
 
 export const fabricStore = editorStore;
 
-// Create a derived store that syncs with editorStore.activePageId
-export const activePageId = derived(
-  { subscribe: editorStore.onChange.bind(editorStore) },
-  () => editorStore.activePageId,
-  editorStore.activePageId
-);
+// Custom store that syncs with editorStore.activePageId and emits immediately
+function createActivePageStore() {
+  const { subscribe, set } = writable<number>(editorStore.activePageId);
+
+  const unsubscribe = editorStore.onChange((project) => {
+    set(project.activePageId);
+  });
+
+  return {
+    subscribe,
+    unsubscribe
+  };
+}
+
+export const activePageId = createActivePageStore();
 
 export const debouncedStoreChange = writable<number>(0);
 

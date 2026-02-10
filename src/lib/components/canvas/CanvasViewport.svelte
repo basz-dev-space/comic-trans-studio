@@ -32,7 +32,6 @@
   let removeKeyboardHandler: (() => void) | undefined;
   let wrapperResizeObserver: ResizeObserver | undefined;
   let resizeHandler: (() => void) | undefined;
-  let isInitializing = false;
 
   let hasBackground = $derived(Boolean(currentPage?.imageUrl || currentPage?.inpaintedImageUrl));
   let hasTextLayers = $derived(Boolean(currentPage?.textBoxes?.length));
@@ -218,15 +217,12 @@
 
     // Initialize canvas if page is already available
     const page = currentPage;
-    if (page && !isInitializing) {
-      isInitializing = true;
+    if (page) {
       (async () => {
         try {
           await manager.init(canvasEl, page);
         } catch (err) {
           notifications.push({ type: 'error', title: 'Canvas initialization failed', description: (err as Error)?.message });
-        } finally {
-          isInitializing = false;
         }
       })();
     }
@@ -249,16 +245,13 @@
   // Reactive effect to initialize canvas when currentPage becomes available
   $effect(() => {
     const page = currentPage;
-    if (page && manager && !manager.getCanvas() && !isInitializing) {
-      isInitializing = true;
+    if (page && manager && !manager.getCanvas()) {
       (async () => {
         try {
           await manager.init(canvasEl, page);
           computeFitScale();
         } catch (err) {
           notifications.push({ type: 'error', title: 'Canvas initialization failed', description: (err as Error)?.message });
-        } finally {
-          isInitializing = false;
         }
       })();
     }

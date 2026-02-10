@@ -61,8 +61,9 @@
 
   function updateStyle(updates: Partial<TextBox['style']>) {
     if (!selectedTextBox) return;
-    // Pass partial updates directly - the store handles merging safely
-    editorStore.updateTextBox(selectedTextBox.id, { style: updates as TextBox['style'] });
+    editorStore.updateTextBox(selectedTextBox.id, {
+      style: { ...selectedTextBox.style, ...updates }
+    });
   }
 
   function updateText() {
@@ -72,8 +73,9 @@
 
   function updateGeometry(updates: Partial<TextBox['geometry']>) {
     if (!selectedTextBox) return;
-    // Pass partial updates directly - the store handles merging safely
-    editorStore.updateTextBox(selectedTextBox.id, { geometry: updates as TextBox['geometry'] });
+    editorStore.updateTextBox(selectedTextBox.id, {
+      geometry: { ...selectedTextBox.geometry, ...updates }
+    });
   }
 </script>
 

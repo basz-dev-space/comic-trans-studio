@@ -43,16 +43,16 @@
   const syncFromCanvas = () => {
     if (isApplyingState) return;
     const items = manager.serializeTextObjects();
-    items.forEach((item: any) => {
+    items.forEach((item) => {
       if (item.id) {
         store.syncGridToCanvas(item.id, {
           text: item.text,
           geometry: {
-            x: item.left,
-            y: item.top,
-            w: item.width,
-            h: item.height,
-            rotation: item.angle || 0
+            x: item.geometry.x,
+            y: item.geometry.y,
+            w: item.geometry.w,
+            h: item.geometry.h,
+            rotation: item.geometry.rotation
           }
         });
       }

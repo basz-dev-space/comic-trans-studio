@@ -58,6 +58,7 @@
   // Simple focus trap - intercept Tab key for accessibility
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
+      open = false;
       onClose();
       return;
     }
@@ -84,6 +85,7 @@
 
   function handleBackdropClick(event: MouseEvent) {
     if (event.target === event.currentTarget) {
+      open = false;
       onClose();
     }
   }

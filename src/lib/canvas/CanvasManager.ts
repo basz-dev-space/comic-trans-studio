@@ -38,25 +38,31 @@ export class CanvasManager {
     this.handlers = handlers;
   }
 
-  init(canvasElement: HTMLCanvasElement, pageData: PageData): Promise<void> {
+  async init(canvasElement: HTMLCanvasElement, pageData: PageData): Promise<boolean> {
     this.isDisposing = false;
 
-    this.canvas = new Canvas(canvasElement, {
-      backgroundColor: '#f8f9fa',
-      preserveObjectStacking: true,
-      selectionColor: 'rgba(99, 102, 241, 0.15)',
-      selectionBorderColor: '#6366f1',
-      selection: true,
-      renderOnAddRemove: false,
-      objectCaching: true,
-      stopContextMenu: true,
-      fireRightClick: true,
-      fireMiddleClick: true
-    });
+    try {
+      this.canvas = new Canvas(canvasElement, {
+        backgroundColor: '#f8f9fa',
+        preserveObjectStacking: true,
+        selectionColor: 'rgba(99, 102, 241, 0.15)',
+        selectionBorderColor: '#6366f1',
+        selection: true,
+        renderOnAddRemove: false,
+        objectCaching: true,
+        stopContextMenu: true,
+        fireRightClick: true,
+        fireMiddleClick: true
+      });
 
-    this.setupEventListeners();
-    this.setupPanHandlers();
-    return this.render(pageData);
+      this.setupEventListeners();
+      this.setupPanHandlers();
+      await this.render(pageData);
+      return true;
+    } catch (error) {
+      console.error('CanvasManager init failed', error);
+      throw new Error(`CanvasManager initialization failed: ${(error as Error)?.message ?? 'unknown error'}`);
+    }
   }
 
   private setupPanHandlers(): void {
@@ -106,7 +112,7 @@ export class CanvasManager {
       zoom *= 0.999 ** delta;
       if (zoom > 5) zoom = 5;
       if (zoom < 0.1) zoom = 0.1;
-      this.canvas.zoomToPoint({ x: e.offsetX, y: e.offsetY } as any, zoom);
+      this.canvas.zoomToPoint(new Point(e.offsetX, e.offsetY), zoom);
       e.preventDefault();
       e.stopPropagation();
     });
@@ -317,7 +323,7 @@ export class CanvasManager {
   }
 
   private createText(box: TextBox): IText {
-    return new IText(box.text, {
+    const text = new IText(box.text, {
       left: box.geometry.x,
       top: box.geometry.y,
       width: box.geometry.w,
@@ -354,8 +360,11 @@ export class CanvasManager {
       borderColor: '#6366f1',
       borderDashArray: undefined,
       padding: 4,
-      cornerPadding: 4,
+      objectCaching: true,
+      data: { id: box.id } as any
+    });
 
+    text.setControlsVisibility({
       ml: true,
       mr: true,
       mt: true,
@@ -364,12 +373,10 @@ export class CanvasManager {
       br: true,
       tl: true,
       tr: true,
-      mtr: true,
-
-      objectCaching: true,
-      strokeCaching: true,
-      data: { id: box.id } as any
+      mtr: true
     });
+
+    return text;
   }
 
   updateTextBox(box: TextBox): void {

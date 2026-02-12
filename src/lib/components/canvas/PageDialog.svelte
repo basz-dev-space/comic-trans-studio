@@ -80,8 +80,8 @@
       width = dims.width;
       height = dims.height;
 
-      const compressed = await compressImage(dataUrl);
-      imageUrl = compressed;
+      const compressedResult = await compressImage(dataUrl);
+      imageUrl = compressedResult.compressed;
 
       notifications.push({ type: 'success', title: 'Image loaded', description: `${dims.width}x${dims.height}` });
     } catch (error) {

@@ -1,0 +1,8 @@
+- Change: Eliminated remaining Svelte warnings by updating label/control semantics in `src/lib/components/canvas/PropertiesPanel.svelte` and fixed the `pageId` captured-initial-state warning in `src/lib/components/Editor.svelte`.
+- Why: User requested the project to be completely working/clean; warnings were still present after prior follow-up.
+- How to validate:
+  - `npx svelte-kit sync`
+  - `npx svelte-check --tsconfig ./tsconfig.json`
+  - Confirm output reports `0 errors and 0 warnings`.
+- Skills used: `skill-creator` (structured plan execution + minimal targeted edits + traceability).
+- History & logs location: `.history/logs/`.

@@ -45,6 +45,26 @@ const buildFabricOptions = (object: any) => ({
   backgroundColor: object.backgroundColor
 });
 
+
+const isTextBoxSchemaObject = (object: any) => {
+  return Boolean(object?.geometry && object?.style && typeof object?.text === 'string');
+};
+
+const buildTextBoxSchemaOptions = (object: any) => ({
+  left: object.geometry?.x ?? 0,
+  top: object.geometry?.y ?? 0,
+  width: object.geometry?.w,
+  angle: object.geometry?.rotation ?? 0,
+  fontSize: Number(object.style?.fontSize || 36),
+  fontFamily: object.style?.fontFamily,
+  fill: object.style?.color,
+  backgroundColor: object.style?.bgColor,
+  lineHeight: object.style?.lineHeight,
+  textAlign: 'left',
+  originX: 'left' as const,
+  originY: 'top' as const
+});
+
 const buildPageCanvasDataUrl = async (page: any, quality: string = 'high'): Promise<string> => {
   const multiplier = qualityMultipliers[quality] || 2;
   const el = document.createElement('canvas');
@@ -107,6 +127,12 @@ const buildPageCanvasDataUrl = async (page: any, quality: string = 'high'): Prom
           ? new Textbox(object.text || '', textOptions)
           : new IText(object.text || '', textOptions);
 
+      canvas.add(text);
+      continue;
+    }
+
+    if (isTextBoxSchemaObject(object)) {
+      const text = new IText(object.text || '', buildTextBoxSchemaOptions(object));
       canvas.add(text);
     }
   }

@@ -23,22 +23,21 @@
   let stopChangeWatcher: undefined | (() => void);
   let removeKeyboardHandler: undefined | (() => void);
   let wrapperResizeObserver: ResizeObserver | undefined;
+  let renderDebounceTimer: number | undefined;
+  let initialized = false;
+  let isRendering = false;
   let isApplyingState = false;
-  let isTranslating = false;
-  let isCleaning = false;
-  let isUploading = false;
+  let isTranslating = $state(false);
+  let isCleaning = $state(false);
+  let isUploading = $state(false);
   let zoomPercent = $state(100);
-  let lastPageForZoom = pageId;
+  let lastPageForZoom = $state(0);
 
   const currentPage = () => store.pages?.[pageId];
   let current = $derived(currentPage());
   let hasBackground = $derived(Boolean(current?.imageUrl || current?.inpaintedImageUrl));
   let hasTextLayers = $derived(Boolean(current?.textBoxes?.length));
   let showCanvasEmptyState = $derived(!hasBackground && !hasTextLayers);
-  let fitScale = $state(1);
-  let canvasScale = $derived(fitScale * (zoomPercent / 100));
-  let viewportWidth = $derived(Math.max(0, Math.round((current?.width || 0) * canvasScale)));
-  let viewportHeight = $derived(Math.max(0, Math.round((current?.height || 0) * canvasScale)));
 
   const syncFromCanvas = () => {
     if (isApplyingState) return;
@@ -63,26 +62,24 @@
     const page = currentPage();
     if (!page || !manager) return;
 
+    if (isRendering) return;
+
     isApplyingState = true;
+    isRendering = true;
     try {
       await manager.render(page);
-      computeFitScale();
+      zoomPercent = Math.round(manager.getZoom() * 100);
     } finally {
+      isRendering = false;
       isApplyingState = false;
     }
   };
 
   const computeFitScale = () => {
     const page = currentPage();
-    if (!page || !wrapperEl) {
-      fitScale = 1;
-      return;
-    }
-    const paddingW = 88;
-    const paddingH = 88;
-    const availW = Math.max(32, wrapperEl.clientWidth - paddingW);
-    const availH = Math.max(32, wrapperEl.clientHeight - paddingH);
-    fitScale = Math.max(0.05, Math.min(availW / page.width, availH / page.height));
+    if (!page || !wrapperEl || !manager) return;
+    const scale = manager.zoomToFit(page.width, page.height, wrapperEl.clientWidth - 48, wrapperEl.clientHeight - 48);
+    zoomPercent = Math.round(scale * 100);
   };
 
   const addTextLayer = () => {
@@ -196,9 +193,15 @@
     }
   };
 
-  const zoomIn = () => (zoomPercent = Math.min(220, zoomPercent + 10));
-  const zoomOut = () => (zoomPercent = Math.max(50, zoomPercent - 10));
-  const zoomToFit = () => (zoomPercent = 100);
+  const zoomIn = () => {
+    manager.zoomIn();
+    zoomPercent = Math.round(manager.getZoom() * 100);
+  };
+  const zoomOut = () => {
+    manager.zoomOut();
+    zoomPercent = Math.round(manager.getZoom() * 100);
+  };
+  const zoomToFit = () => computeFitScale();
   const canUndo = () => store.canUndo();
   const canRedo = () => store.canRedo();
   const performUndo = () => store.undo();
@@ -230,6 +233,7 @@
   };
 
   onMount(() => {
+    lastPageForZoom = pageId;
     manager = new CanvasManager({
       onObjectsChanged: syncFromCanvas,
       onSelectionChanged: (id) => {
@@ -242,6 +246,8 @@
       (async () => {
         try {
           await manager.init(canvasEl, page);
+          initialized = true;
+          zoomToFit();
         } catch (err) {
           notifications.push({ type: 'error', title: 'Canvas initialization failed', description: (err as Error)?.message });
         }
@@ -250,7 +256,10 @@
 
     stopChangeWatcher = store.onChange(() => {
       if (store.activePageId !== pageId) return;
-      renderPage();
+      window.clearTimeout(renderDebounceTimer);
+      renderDebounceTimer = window.setTimeout(() => {
+        renderPage();
+      }, 100);
     });
 
     removeKeyboardHandler = installKeyboardShortcuts();
@@ -266,7 +275,7 @@
   });
 
   $effect(() => {
-    if (store && typeof pageId === 'number') {
+    if (store && typeof pageId === 'number' && initialized && !isRendering) {
       if (pageId !== lastPageForZoom) {
         zoomToFit();
         lastPageForZoom = pageId;
@@ -278,6 +287,7 @@
 
   onDestroy(() => {
     stopChangeWatcher?.();
+    window.clearTimeout(renderDebounceTimer);
     removeKeyboardHandler?.();
     wrapperResizeObserver?.disconnect();
     manager?.dispose();
@@ -300,10 +310,8 @@
 
   <div bind:this={wrapperEl} class="relative flex min-h-0 flex-1 items-center justify-center overflow-auto p-5">
     <div class="rounded bg-[#cfd4db] p-6 flex-shrink-0">
-      <div class="transition-[width,height] duration-150" style={`width:${viewportWidth}px; height:${viewportHeight}px;`}>
-        <div style={`transform: scale(${canvasScale}); transform-origin: top left;`} class="transition-transform duration-150">
-          <canvas bind:this={canvasEl}></canvas>
-        </div>
+      <div>
+        <canvas bind:this={canvasEl}></canvas>
       </div>
     </div>
 

@@ -96,8 +96,9 @@
   {:else}
     <div class="flex-1 overflow-y-auto p-3 space-y-4">
       <div>
-        <label class="block text-xs font-medium text-gray-700 mb-1">Text</label>
+        <label for="prop-text" class="block text-xs font-medium text-gray-700 mb-1">Text</label>
         <textarea
+          id="prop-text"
           bind:value={text}
           onblur={updateText}
           rows="3"
@@ -108,8 +109,9 @@
 
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">Font</label>
+          <label for="prop-font" class="block text-xs font-medium text-gray-700 mb-1">Font</label>
           <select
+            id="prop-font"
             bind:value={fontFamily}
             onchange={() => updateStyle({ fontFamily })}
             class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
@@ -120,8 +122,9 @@
           </select>
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">Size</label>
+          <label for="prop-size" class="block text-xs font-medium text-gray-700 mb-1">Size</label>
           <select
+            id="prop-size"
             bind:value={fontSize}
             onchange={() => updateStyle({ fontSize })}
             class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
@@ -134,7 +137,7 @@
       </div>
 
       <div>
-        <label class="block text-xs font-medium text-gray-700 mb-2">Text Color</label>
+        <p class="block text-xs font-medium text-gray-700 mb-2">Text Color</p>
         <div class="flex flex-wrap gap-1.5">
           {#each colors as color}
             <button
@@ -156,7 +159,7 @@
       </div>
 
       <div>
-        <label class="block text-xs font-medium text-gray-700 mb-2">Background</label>
+        <p class="block text-xs font-medium text-gray-700 mb-2">Background</p>
         <div class="flex flex-wrap gap-1.5">
           <button
             type="button"
@@ -182,7 +185,7 @@
       </div>
 
       <div>
-        <label class="block text-xs font-medium text-gray-700 mb-2">Bubble Shape</label>
+        <p class="block text-xs font-medium text-gray-700 mb-2">Bubble Shape</p>
         <div class="flex gap-2">
           <button
             type="button"
@@ -209,10 +212,11 @@
       </div>
 
       <div>
-        <label class="block text-xs font-medium text-gray-700 mb-1">
+        <label for="prop-line-height" class="block text-xs font-medium text-gray-700 mb-1">
           Line Height: {lineHeight.toFixed(1)}
         </label>
         <input
+          id="prop-line-height"
           type="range"
           min="0.8"
           max="2.5"
@@ -224,11 +228,12 @@
       </div>
 
       <div class="pt-3 border-t border-gray-200">
-        <label class="block text-xs font-medium text-gray-700 mb-2">Position</label>
+        <p class="block text-xs font-medium text-gray-700 mb-2">Position</p>
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="text-xs text-gray-500">X</label>
+            <label for="prop-x" class="text-xs text-gray-500">X</label>
             <input
+              id="prop-x"
               type="number"
               value={Math.round(selectedTextBox.geometry.x)}
               onchange={(e) => updateGeometry({ x: Number((e.target as HTMLInputElement).value) })}
@@ -236,8 +241,9 @@
             />
           </div>
           <div>
-            <label class="text-xs text-gray-500">Y</label>
+            <label for="prop-y" class="text-xs text-gray-500">Y</label>
             <input
+              id="prop-y"
               type="number"
               value={Math.round(selectedTextBox.geometry.y)}
               onchange={(e) => updateGeometry({ y: Number((e.target as HTMLInputElement).value) })}
@@ -245,8 +251,9 @@
             />
           </div>
           <div>
-            <label class="text-xs text-gray-500">Width</label>
+            <label for="prop-width" class="text-xs text-gray-500">Width</label>
             <input
+              id="prop-width"
               type="number"
               value={Math.round(selectedTextBox.geometry.w)}
               onchange={(e) => updateGeometry({ w: Number((e.target as HTMLInputElement).value) })}
@@ -254,8 +261,9 @@
             />
           </div>
           <div>
-            <label class="text-xs text-gray-500">Height</label>
+            <label for="prop-height" class="text-xs text-gray-500">Height</label>
             <input
+              id="prop-height"
               type="number"
               value={Math.round(selectedTextBox.geometry.h)}
               onchange={(e) => updateGeometry({ h: Number((e.target as HTMLInputElement).value) })}

@@ -1,0 +1,8 @@
+- Change: Fixed canvas/editor batch-2 bugs across `src/lib/canvas/CanvasManager.ts`, `src/lib/components/Editor.svelte`, `src/lib/components/canvas/CanvasViewport.svelte`, `src/lib/components/DataGrid.svelte`, `src/lib/utils/export.ts`, and `src/lib/components/canvas/CanvasEditor.svelte`.
+- Why: Resolve zoom conflicts, invalid Fabric.js API usage, render-loop risks, DataGrid/store contract mismatches, export schema handling, and panel/dialog wiring gaps reported in bug audit.
+- How to validate:
+  - Run `npx svelte-kit sync && npx svelte-check --tsconfig ./tsconfig.json`.
+  - Verify canvas zoom controls use Fabric viewport only and keep percentage display in sync.
+  - Verify PagePanel/LayerPanel/ExportDialog render in CanvasEditor and export toolbar opens dialog.
+  - Verify DataGrid add-row inserts a valid text box schema without calling removed `store.notify()`.
+- Skills used: `skill-creator` (used for structured execution discipline: compact plan-first workflow and traceable implementation notes).

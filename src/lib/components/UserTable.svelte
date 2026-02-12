@@ -173,7 +173,7 @@
           variant="outline"
           className="h-8 rounded border-[#ccd3dc] text-xs"
           disabled={currentPage === 1}
-          on:click={() => goToPage(currentPage - 1)}
+          onclick={() => goToPage(currentPage - 1)}
         >
           {t($locale, 'admin.previous')}
         </Button>
@@ -193,7 +193,7 @@
           variant="outline"
           className="h-8 rounded border-[#ccd3dc] text-xs"
           disabled={currentPage === totalPages}
-          on:click={() => goToPage(currentPage + 1)}
+          onclick={() => goToPage(currentPage + 1)}
         >
           {t($locale, 'admin.next')}
         </Button>

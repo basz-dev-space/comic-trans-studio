@@ -53,8 +53,19 @@
   };
 
   const addRow = () => {
-    store.syncCanvasToGrid({ text: 'New text', originalText: 'New text', left: 60, top: 60, width: 260, height: 90, fontSize: 32, fill: '#ffffff', backgroundColor: 'rgba(15,23,42,0.65)' });
-    store.notify();
+    store.syncCanvasToGrid({
+      text: 'New text',
+      originalText: 'New text',
+      geometry: { x: 60, y: 60, w: 260, h: 90, rotation: 0 },
+      style: {
+        fontSize: 32,
+        fontFamily: 'Inter',
+        color: '#ffffff',
+        bgColor: 'rgba(15,23,42,0.65)',
+        bubbleShape: 'rounded',
+        lineHeight: 1.2
+      }
+    });
     loadRows();
   };
 

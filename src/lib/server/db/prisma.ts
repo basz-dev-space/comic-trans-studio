@@ -1,14 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
+import { DATABASE_URL } from '$env/static/private';
 
-const DATABASE_URL_KEYS = [
-  'DATABASE_URL',
-  'PRISMA_DATABASE_URL',
-  'POSTGRES_PRISMA_URL',
-  'POSTGRES_URL',
-  'PGDATABASE_URL'
-] as const;
+
+
 
 const DATABASE_URL_FILE_KEYS = [
   'DATABASE_URL_FILE',

@@ -27,6 +27,7 @@
   let showBottomPanel = $state(true);
   let showLayersPanel = $state(true);
   let showExportDialog = $state(false);
+  let exportDialogFormat = $state<'pdf' | 'zip' | 'png'>('pdf');
   let leftPanelWidth = $state(210);
 
   const minLeft = 160;
@@ -47,6 +48,11 @@
 
   const createPage = () => {
     editorStore.addPage();
+  };
+
+  const openExportDialog = (format: 'pdf' | 'zip' | 'png') => {
+    exportDialogFormat = format;
+    showExportDialog = true;
   };
 
   const togglePanel = (panel: 'pages' | 'canvas' | 'bottom') => {
@@ -122,10 +128,10 @@
       </button>
 
       <div class="ml-auto flex gap-2">
-        <Button variant="outline" onclick={() => (showExportDialog = true)} className="h-8 rounded bg-white px-3 text-xs font-semibold text-gray-700">
+        <Button variant="outline" onclick={() => openExportDialog('zip')} className="h-8 rounded bg-white px-3 text-xs font-semibold text-gray-700">
           <Box class="mr-1 h-3.5 w-3.5" /> {t($locale, 'chapter.exportZip')}
         </Button>
-        <Button variant="outline" onclick={() => (showExportDialog = true)} className="h-8 rounded bg-white px-3 text-xs font-semibold text-gray-700">
+        <Button variant="outline" onclick={() => openExportDialog('pdf')} className="h-8 rounded bg-white px-3 text-xs font-semibold text-gray-700">
           <FileText class="mr-1 h-3.5 w-3.5" /> {t($locale, 'chapter.exportPdf')}
         </Button>
       </div>
@@ -237,4 +243,4 @@
   {/if}
 </div>
 
-<ExportDialog open={showExportDialog} onClose={() => (showExportDialog = false)} />
+<ExportDialog open={showExportDialog} initialFormat={exportDialogFormat} onClose={() => (showExportDialog = false)} />

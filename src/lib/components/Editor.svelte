@@ -24,9 +24,10 @@
   let removeKeyboardHandler: undefined | (() => void);
   let wrapperResizeObserver: ResizeObserver | undefined;
   let renderDebounceTimer: number | undefined;
-  let initialized = false;
-  let isRendering = false;
+  let initialized = $state(false);
+  let isRendering = $state(false);
   let isApplyingState = false;
+  let needsRender = false;
   let isTranslating = $state(false);
   let isCleaning = $state(false);
   let isUploading = $state(false);
@@ -62,7 +63,10 @@
     const page = currentPage();
     if (!page || !manager) return;
 
-    if (isRendering) return;
+    if (isRendering) {
+      needsRender = true;
+      return;
+    }
 
     isApplyingState = true;
     isRendering = true;
@@ -72,6 +76,12 @@
     } finally {
       isRendering = false;
       isApplyingState = false;
+      if (needsRender) {
+        needsRender = false;
+        queueMicrotask(() => {
+          void renderPage();
+        });
+      }
     }
   };
 

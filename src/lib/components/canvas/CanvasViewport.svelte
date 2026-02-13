@@ -31,6 +31,7 @@
   let renderDebounceTimer: number | undefined;
   let initialized = false;
   let isRendering = false;
+  let needsRender = false;
 
   let hasBackground = $derived(Boolean(currentPage?.imageUrl || currentPage?.inpaintedImageUrl));
   let hasTextLayers = $derived(Boolean(currentPage?.textBoxes?.length));
@@ -46,7 +47,10 @@
     const page = currentPage;
     if (!page || !manager) return;
 
-    if (isRendering) return;
+    if (isRendering) {
+      needsRender = true;
+      return;
+    }
 
     isApplyingState = true;
     isRendering = true;
@@ -56,6 +60,12 @@
     } finally {
       isRendering = false;
       isApplyingState = false;
+      if (needsRender) {
+        needsRender = false;
+        queueMicrotask(() => {
+          void renderPage();
+        });
+      }
     }
   }
 

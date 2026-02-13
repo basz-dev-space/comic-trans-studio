@@ -18,6 +18,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:init": "prisma generate && prisma db push",
+    "db:reset": "rm -f prisma/dev.db && prisma db push",
+    "setup": "npm install && npm run db:push && echo '\n✅ Setup complete! Run: npm run dev'",
     "postinstall": "prisma generate"
   },
   "devDependencies": {

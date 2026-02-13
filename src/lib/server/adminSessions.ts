@@ -1,7 +1,8 @@
 import { randomBytes, randomUUID } from 'node:crypto';
+import { env } from '$env/dynamic/private';
 
 const sessions = new Map<string, { expiresAt: number }>();
-const TTL_MS = Number(process.env.ADMIN_SESSION_TTL_MS ?? String(1000 * 60 * 60 * 24)); // 24h default
+const TTL_MS = Number(env.ADMIN_SESSION_TTL_MS ?? String(1000 * 60 * 60 * 24)); // 24h default
 
 const secureToken = () => {
   try {

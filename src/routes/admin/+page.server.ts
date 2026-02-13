@@ -7,6 +7,7 @@ import {
   validateAdminSession,
   destroyAdminSession
 } from '$lib/server/adminSessions';
+import { env } from '$env/dynamic/private';
 
 const ADMIN_COOKIE = 'admin_session';
 
@@ -44,8 +45,8 @@ export const actions: Actions = {
       return fail(400, { error: 'Username and password required', form: { username } });
     }
 
-    const envUser = process.env.ADMIN_USERNAME ?? '';
-    const envPass = process.env.ADMIN_PASSWORD ?? '';
+    const envUser = env.ADMIN_USERNAME ?? '';
+    const envPass = env.ADMIN_PASSWORD ?? '';
 
     if (!envUser || !envPass)
       return fail(500, { error: 'Admin credentials not configured', form: { username } });
@@ -56,7 +57,7 @@ export const actions: Actions = {
         path: '/',
         httpOnly: true,
         sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production'
+        secure: env.NODE_ENV === 'production'
       });
       throw redirect(303, '/admin');
     }

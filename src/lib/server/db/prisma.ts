@@ -1,10 +1,15 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
-import { DATABASE_URL } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
-
-
+const DATABASE_URL_KEYS = [
+  'DATABASE_URL',
+  'PRISMA_DATABASE_URL',
+  'POSTGRES_PRISMA_URL',
+  'POSTGRES_URL',
+  'PGDATABASE'
+] as const;
 
 const DATABASE_URL_FILE_KEYS = [
   'DATABASE_URL_FILE',
@@ -45,6 +50,17 @@ const parseDotEnv = (content: string) => {
 };
 
 const readEnvFile = () => {
+  // In SvelteKit, .env files are loaded automatically by Vite
+  // So we check if DATABASE_URL is available in env
+  const url = env.DATABASE_URL?.trim();
+  if (url) {
+    return {
+      key: 'dotenv:DATABASE_URL' as const,
+      value: url
+    };
+  }
+
+  // Fallback: read .env files manually (for edge cases)
   for (const fileName of DOTENV_CANDIDATES) {
     const filePath = resolve(process.cwd(), fileName);
     if (!existsSync(filePath)) continue;
@@ -68,7 +84,7 @@ const readEnvFile = () => {
 
 const readEnvFilePath = (): DatabaseUrlInfo | null => {
   for (const key of DATABASE_URL_FILE_KEYS) {
-    const pathValue = process.env[key]?.trim();
+    const pathValue = env[key]?.trim();
     if (!pathValue) continue;
     try {
       const contents = readFileSync(pathValue, 'utf8').trim();
@@ -85,7 +101,7 @@ const findDatabaseUrl = (): DatabaseUrlInfo | null => {
   if (cachedDatabaseInfo !== undefined) return cachedDatabaseInfo;
 
   for (const key of DATABASE_URL_KEYS) {
-    const value = process.env[key];
+    const value = env[key];
     if (value && value.trim().length > 0) {
       cachedDatabaseInfo = { key, value: value.trim() };
       return cachedDatabaseInfo;
@@ -107,7 +123,7 @@ export const getPrismaClient = () => {
   const info = findDatabaseUrl();
   const client = new PrismaClient({
     datasources: info ? { db: { url: info.value } } : undefined,
-    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error']
+    log: env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error']
   });
 
   globalAny[GLOBAL_PRISMA_KEY] = client;

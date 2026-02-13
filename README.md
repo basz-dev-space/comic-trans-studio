@@ -53,10 +53,36 @@ ComicTrans Studio is a SvelteKit application for comic translation workflows. It
 - **Build tooling:** Vite
 
 ## Run locally
+
+### 1. Install dependencies
 ```bash
 npm install
+```
+
+### 2. Initialize the database
+The application uses Prisma with SQLite. Before running the app, you need to generate the Prisma Client and set up the database:
+
+```bash
+# Generate Prisma Client (creates .prisma/client module)
+npm run db:generate
+
+# Create database and tables
+npm run db:push
+```
+
+Or run both commands together:
+```bash
+npm run db:init
+```
+
+**Note:** If you see a `MODULE_NOT_FOUND` error for `.prisma/client`, run `npm run db:generate` first.
+
+### 3. Start the development server
+```bash
 npm run dev
 ```
+
+The app will be available at `http://localhost:5173`
 
 ## Checks
 ```bash

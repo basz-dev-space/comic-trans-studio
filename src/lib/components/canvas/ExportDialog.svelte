@@ -11,9 +11,10 @@
   interface Props {
     open?: boolean;
     onClose?: () => void;
+    initialFormat?: 'pdf' | 'zip' | 'png';
   }
 
-  let { open = $bindable(false), onClose = () => {} }: Props = $props();
+  let { open = $bindable(false), onClose = () => {}, initialFormat = 'pdf' }: Props = $props();
 
   let exportFormat: 'pdf' | 'zip' | 'png' = $state('pdf');
   let exportRange: 'all' | 'current' = $state('all');
@@ -23,6 +24,12 @@
 
   $effect(() => {
     fileName = editorStore.project.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  });
+
+  $effect(() => {
+    if (open) {
+      exportFormat = initialFormat;
+    }
   });
 
   async function handleExport() {

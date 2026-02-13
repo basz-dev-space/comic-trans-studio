@@ -17,21 +17,21 @@
   let manager: CanvasManager;
 
   let zoomPercent = $state(100);
-  let fitScale = $state(1);
   let isUploading = $state(false);
   let isTranslating = $state(false);
   let isCleaning = $state(false);
   let isApplyingState = $state(false);
 
   let currentPage = $derived(editorStore.pages[pageId]);
-  let canvasScale = $derived(fitScale * (zoomPercent / 100));
-  let viewportWidth = $derived(Math.max(0, Math.round((currentPage?.width || 0) * canvasScale)));
-  let viewportHeight = $derived(Math.max(0, Math.round((currentPage?.height || 0) * canvasScale)));
 
   let stopChangeWatcher: (() => void) | undefined;
   let removeKeyboardHandler: (() => void) | undefined;
   let wrapperResizeObserver: ResizeObserver | undefined;
   let resizeHandler: (() => void) | undefined;
+  let renderDebounceTimer: number | undefined;
+  let initialized = false;
+  let isRendering = false;
+  let needsRender = false;
 
   let hasBackground = $derived(Boolean(currentPage?.imageUrl || currentPage?.inpaintedImageUrl));
   let hasTextLayers = $derived(Boolean(currentPage?.textBoxes?.length));
@@ -47,26 +47,33 @@
     const page = currentPage;
     if (!page || !manager) return;
 
+    if (isRendering) {
+      needsRender = true;
+      return;
+    }
+
     isApplyingState = true;
+    isRendering = true;
     try {
       await manager.render(page);
-      computeFitScale();
+      zoomPercent = Math.round(manager.getZoom() * 100);
     } finally {
+      isRendering = false;
       isApplyingState = false;
+      if (needsRender) {
+        needsRender = false;
+        queueMicrotask(() => {
+          void renderPage();
+        });
+      }
     }
   }
 
   function computeFitScale() {
     const page = currentPage;
-    if (!page || !wrapperEl) {
-      fitScale = 1;
-      return;
-    }
-    const paddingW = 88;
-    const paddingH = 88;
-    const availW = Math.max(32, wrapperEl.clientWidth - paddingW);
-    const availH = Math.max(32, wrapperEl.clientHeight - paddingH);
-    fitScale = Math.max(0.05, Math.min(availW / page.width, availH / page.height));
+    if (!page || !wrapperEl || !manager) return;
+    const scale = manager.zoomToFit(page.width, page.height, wrapperEl.clientWidth - 48, wrapperEl.clientHeight - 48);
+    zoomPercent = Math.round(scale * 100);
   }
 
   function addTextLayer() {
@@ -155,15 +162,17 @@
   }
 
   function zoomIn() {
-    zoomPercent = Math.min(220, zoomPercent + 10);
+    manager.zoomIn();
+    zoomPercent = Math.round(manager.getZoom() * 100);
   }
 
   function zoomOut() {
-    zoomPercent = Math.max(50, zoomPercent - 10);
+    manager.zoomOut();
+    zoomPercent = Math.round(manager.getZoom() * 100);
   }
 
   function zoomToFit() {
-    zoomPercent = 100;
+    computeFitScale();
   }
 
   function canUndo() {
@@ -221,6 +230,8 @@
       (async () => {
         try {
           await manager.init(canvasEl, page);
+          initialized = true;
+          zoomToFit();
         } catch (err) {
           notifications.push({ type: 'error', title: 'Canvas initialization failed', description: (err as Error)?.message });
         }
@@ -229,10 +240,12 @@
 
     stopChangeWatcher = editorStore.onChange(() => {
       if (editorStore.activePageId !== pageId) return;
-      // Avoid re-rendering if the change originated from canvas interactions
-      if (!isApplyingState) {
+      if (isApplyingState) return;
+
+      window.clearTimeout(renderDebounceTimer);
+      renderDebounceTimer = window.setTimeout(() => {
         renderPage();
-      }
+      }, 100);
     });
 
     removeKeyboardHandler = installKeyboardShortcuts();
@@ -245,20 +258,21 @@
   // Reactive effect to initialize canvas when currentPage becomes available
   $effect(() => {
     const page = currentPage;
-    if (page && manager && !manager.getCanvas()) {
-      (async () => {
-        try {
-          await manager.init(canvasEl, page);
-          computeFitScale();
-        } catch (err) {
-          notifications.push({ type: 'error', title: 'Canvas initialization failed', description: (err as Error)?.message });
-        }
-      })();
-    }
+    if (!page || !manager || initialized || manager.getCanvas()) return;
+
+    (async () => {
+      try {
+        await manager.init(canvasEl, page);
+        initialized = true;
+        zoomToFit();
+      } catch (err) {
+        notifications.push({ type: 'error', title: 'Canvas initialization failed', description: (err as Error)?.message });
+      }
+    })();
   });
 
   $effect(() => {
-    if (editorStore && typeof pageId === 'number') {
+    if (editorStore && typeof pageId === 'number' && initialized && !isRendering) {
       if (pageId !== editorStore.activePageId - 0) {
         zoomToFit();
       }
@@ -269,6 +283,7 @@
 
   onDestroy(() => {
     stopChangeWatcher?.();
+    window.clearTimeout(renderDebounceTimer);
     removeKeyboardHandler?.();
     wrapperResizeObserver?.disconnect();
     // Remove resize event listener to prevent memory leak
@@ -311,10 +326,8 @@
 
   <div bind:this={wrapperEl} class="relative flex min-h-0 flex-1 items-center justify-center overflow-auto p-5">
     <div class="rounded bg-[#cfd4db] p-6 flex-shrink-0">
-      <div class="transition-[width,height] duration-150" style={`width:${viewportWidth}px; height:${viewportHeight}px;`}>
-        <div style={`transform: scale(${canvasScale}); transform-origin: top left;`} class="transition-transform duration-150">
-          <canvas bind:this={canvasEl}></canvas>
-        </div>
+      <div>
+        <canvas bind:this={canvasEl}></canvas>
       </div>
     </div>
 
